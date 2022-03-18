@@ -17,20 +17,15 @@ def index():
 @app.post("/query")
 def query():
 	reqData = ""
-	queryID = request.json.get("id")
-	gdriveType = request.json.get("type")
-	if gdriveType == "file" and len(queryID) > 10:
+	dataPayload = request.json.get("data")
+	queryID = dataPayload.get("id")
+	gdriveType = dataPayload.get("type")
+	if gdriveType == "file":
 		req = requests.get(f"https://www.googleapis.com/drive/v3/files/{queryID}?key={GOOGLE_API_KEY}")
-		if req.status_code != 200:
-			abort(429)
-		else: 
-			reqData = req.json()
-	elif gdriveType == "folder" and len(queryID) > 10:
+		reqData = req.json()
+	elif gdriveType == "folder":
 		req = requests.get(f"https://www.googleapis.com/drive/v3/files?q=%27{queryID}%27+in+parents&key={GOOGLE_API_KEY}")
-		if req.status_code != 200:
-			abort(429)
-		else: 
-			reqData = req.json()
+		reqData = req.json()
 	else:
 		abort(403)
 	return make_response(reqData, 200)
