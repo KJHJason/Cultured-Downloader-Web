@@ -15,7 +15,9 @@ def format_server_time():
 @app.route("/")
 def index():
 	context = { "server_time": format_server_time() }
-	return render_template("home.html", context=context)
+	res = make_response(render_template("home.html", context=context))
+	res.headers["Cache-Control"] = "public, max-age=300, s-maxage=600"
+	return res
 
 @app.route("/query", methods=["GET", "POST"])
 def query():
