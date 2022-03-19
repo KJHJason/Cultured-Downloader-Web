@@ -1,0 +1,4 @@
+gcloud builds submit --tag gcr.io/cultureddownloader/flask-fire
+gcloud run deploy flask-fire --image gcr.io/cultureddownloader/flask-fire --region us-central1
+
+firebase deploy
