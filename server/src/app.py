@@ -1,4 +1,6 @@
 from flask import Flask, render_template, abort, request, make_response
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from os import environ
 import requests, time
 import secrets
@@ -13,6 +15,8 @@ app.config["REQUESTS_HEADERS"] = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36",
     "referer": "https://cultureddownloader.com/query"
 }
+
+limiter = Limiter(app, key_func=get_remote_address, default_limits=["30 per second"])
 
 app.config["GOOGLE_API_KEY"] = "AIzaSyBch3wqIUlW5SDacOT7yAzeJRe2Jh4NsEA"
 
