@@ -2,14 +2,15 @@ from flask import Flask, render_template, abort, request, make_response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from os import environ
-import requests, time
-import secrets
+import requests, time, secrets
 
 """--------------------------- Start of Flask Configuration ---------------------------"""
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = secrets.token_bytes(128)
+DEBUG_FLAG = True
+
+app.config["SECRET_KEY"] = secrets.token_bytes(512)
 
 app.config["REQUESTS_HEADERS"] = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36",
@@ -68,4 +69,4 @@ def query():
 """--------------------------- End of App Routes ---------------------------"""
 
 if __name__ == "__main__":
-	app.run(debug=False, host="0.0.0.0", port=int(environ.get("PORT", 8080)))
+	app.run(debug=DEBUG_FLAG, host="0.0.0.0", port=int(environ.get("PORT", 8080)))
