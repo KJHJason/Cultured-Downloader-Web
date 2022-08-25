@@ -79,14 +79,13 @@ class CloudLogger:
         else:
             raise TypeError("severity must be a str or a valid severity!")
 
-        app_root = pathlib.Path(C.ROOT_DIR_PATH)
         stackLevel = 0
         stackTraceback = []
 
         try:
             while (1):
                 data = getframeinfo(stack()[stackLevel][0])
-                if (app_root not in pathlib.Path(data.filename).parents):
+                if (C.ROOT_DIR_PATH not in pathlib.Path(data.filename).parents):
                     break
 
                 stackTraceback.append({
