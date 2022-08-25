@@ -4,12 +4,16 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask.sessions import SecureCookieSessionInterface
 
+# import Google Cloud Logging API (third-party library)
+from google.cloud import logging as gcp_logging
+
 # import Python's standard libraries
 from os import environ
 import hashlib
+import logging
 
 # import local python libraries
-from classes import CONSTANTS as C, SECRET_MANAGER
+from classes import APP_CONSTANTS as AC, SECRET_MANAGER, CLOUD_LOGGER
 from routes import general, api
 
 """--------------------------- Start of Flask Configuration ---------------------------"""
@@ -33,7 +37,14 @@ app.session_interface = FLASK_SESSION_COOKIE_INTERFACE
 # Flask session cookie configurations
 app.config["SESSION_PERMANENT"] = False # Session cookie will be deleted when the browser is closed
 
+# Flask limiter config
 limiter = Limiter(app, key_func=get_remote_address, default_limits=["10 per second"])
+
+# Integrate Google CLoud Logging to the Flask app
+app.config["CLOUD_LOGGER"] = CLOUD_LOGGER
+gcp_logging.handlers.setup_logging(app.config["CLOUD_LOGGER"].GOOGLE_LOGGING_HANDLER)
+logging.getLogger().setLevel(logging.INFO)
+app.logger.addHandler(app.config["CLOUD_LOGGER"].GOOGLE_LOGGING_HANDLER)
 
 """--------------------------- End of Flask Configuration ---------------------------"""
 
@@ -46,5 +57,5 @@ with app.app_context():
 """--------------------------- End of App Routes ---------------------------"""
 
 if (__name__ == "__main__"):
-    host = "0.0.0.0" if (not C.DEBUG_MODE) else None
-    app.run(debug=C.DEBUG_MODE, host=host, port=int(environ.get("PORT", 8080)))
+    host = "0.0.0.0" if (not AC.DEBUG_MODE) else None
+    app.run(debug=AC.DEBUG_MODE, host=host, port=int(environ.get("PORT", 8080)))

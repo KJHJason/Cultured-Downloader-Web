@@ -19,3 +19,4 @@ google-crc32c>=1.3.0
 # Other Google Cloud Platform APIs
 # used in the Flask web app
 google-cloud-secret-manager>=2.11.1
+google-cloud-logging>=3.1.2
