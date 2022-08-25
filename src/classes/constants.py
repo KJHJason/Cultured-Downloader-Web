@@ -16,13 +16,15 @@ from six import ensure_binary
 from dataclasses import dataclass, field
 
 def crc32c(data:Union[bytes, str]) -> int:
-    """
-    Calculates the CRC32C checksum of the provided data
+    """Calculates the CRC32C checksum of the provided data
+
     Args:
-    - data (str|bytes): the bytes of the data which the checksum should be calculated
-        - If the data is in string format, it will be encoded to bytes
+        data (str|bytes): 
+            The bytes of the data which the checksum should be calculated.
+            If the data is in string format, it will be encoded to bytes.
+
     Returns:
-    - An int representing the CRC32C checksum of the provided bytes
+        An int representing the CRC32C checksum of the provided bytes
     """
     return int(g_crc32c(initial_value=ensure_binary(data)).hexdigest(), 16)
 
