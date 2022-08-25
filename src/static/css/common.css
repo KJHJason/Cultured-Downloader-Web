@@ -11,6 +11,22 @@ a:hover {
 	text-decoration: underline;
 }
 
+.mainbody {
+	width: 100%;
+	height: auto;
+	background-image: url(../images/mainbackground.jpg);
+	padding:30px;
+	background-size: 100% auto;
+	background-repeat: no-repeat;
+	background-color:black;
+
+}
+
+.textbody {
+	color: lightblue;
+	opacity: 1;
+}
+
 /* ============ Navigation Bar ============ */
 
 @keyframes fadeIn {
@@ -249,13 +265,10 @@ footer .header {
 	margin-bottom: 20px;
 }
 
-footer .header div {
+footer{
 	content: '';
-	position: absolute;
 	background-color: #009DF8;
-	height: 2px;
 	box-sizing: border-box;
-	width: 60px;
 }
 
 .logo_margin {
