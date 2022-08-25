@@ -1,4 +1,2 @@
-gcloud builds submit --tag gcr.io/cultureddownloader/flask-fire
-gcloud run deploy flask-fire --image gcr.io/cultureddownloader/flask-fire --region us-central1
-
-firebase deploy
+gcloud builds submit --tag gcr.io/cultureddownloader/cultured-downloader
+gcloud beta run deploy coursefinity --image=gcr.io/cultureddownloader/cultured-downloader:latest --execution-environment=gen2 --region=asia-southeast1 --project=cultureddownloader
