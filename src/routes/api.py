@@ -3,7 +3,7 @@ from flask import request, Blueprint, jsonify, current_app
 
 # import local python libraries
 from functions import send_request
-from classes import AES_GCM, APP_CONSTANTS as AC
+from classes import AESGCM, APP_CONSTANTS as AC
 from classes.exceptions import CRC32ChecksumError, DecryptionError
 from .security import LIMITER
 
@@ -33,7 +33,7 @@ def encrypt():
         return jsonify({"error": "No cookie data was provided."}), 400
 
     try:
-        encryptedCookieData = AES_GCM.encrypt(cookieData, keyID=AC.COOKIE_ENCRYPTION_KEY)
+        encryptedCookieData = AESGCM.encrypt(cookieData, keyID=AC.COOKIE_ENCRYPTION_KEY)
     except (CRC32ChecksumError):
         return jsonify({"error": "Integrity checks failed."}), 400
     else:
@@ -46,7 +46,7 @@ def decrypt():
         return jsonify({"error": "No cookie data was provided."}), 400
 
     try:
-        decryptedCookieData = AES_GCM.decrypt(cookieData, keyID=AC.COOKIE_ENCRYPTION_KEY)
+        decryptedCookieData = AESGCM.decrypt(cookieData, keyID=AC.COOKIE_ENCRYPTION_KEY)
     except (TypeError):
         return jsonify({"error": "Encrypted cookie must be in bytes."}), 400
     except (CRC32ChecksumError):
