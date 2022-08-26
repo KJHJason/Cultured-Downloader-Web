@@ -30,37 +30,13 @@ else:
     from .cloud_logger import CLOUD_LOGGER
     from .app_constants import AppConstants as AC
 
-class GCPKMS:
+class GCP_KMS:
     """Creates an authenticated Cloud KMS client that can be used for cryptographic operations."""
     def __init__(self) -> None:
         self.__KMS_CLIENT = kms.KeyManagementServiceClient.from_service_account_info(
             info=json.loads(SECRET_MANAGER.get_secret_payload(secretID="google-kms"))
         )
         self.__KEY_RING_ID = "dev" if (AC.DEBUG_MODE) else "web-app"
-
-    def get_latest_key_ver(self, keyID: str, keyRingID: Optional[str] = None) -> int | None:
-        """Get the latest version of the key from GCP KMS API.
-
-        Args:
-            keyID (str):
-                The ID of the key.
-            keyRingID (str, optional):
-                The ID of the key ring. (Defaults to KEY_RING_ID attribute of the object)
-
-        Returns:
-            The latest integer version of the key or None if the key is not found.
-        """
-        if (keyRingID is None):
-            keyRingID = self.__KEY_RING_ID
-
-        keyPath = self.KMS_CLIENT.crypto_key_path(
-            C.GOOGLE_PROJECT_NAME, C.GOOGLE_PROJECT_LOCATION, keyRingID, keyID
-        )
-        try:
-            metadata = self.__KMS_CLIENT.get_crypto_key(request={"name": keyPath})
-        except (GoogleErrors.NotFound):
-            return None # key not found
-        return int(metadata.primary.name.rsplit(sep="/", maxsplit=1)[1])
 
     def log_failed_decryption(self, ciphertext: bytes, error: Any) -> None:
         """Logs the failed decryption attempt to the Cloud Logger and raise DecryptionError."""
@@ -88,7 +64,7 @@ class GCPKMS:
         """Returns the key ring ID."""
         return self.__KEY_RING_ID
 
-class AESGCM(GCPKMS):
+class GCP_AESGCM(GCP_KMS):
     """Creates an authenticated GCP KMS client that uses AES-256-GCM for cryptographic operations."""
     def __init__(self) -> None:
         super().__init__()
@@ -199,13 +175,24 @@ class AESGCM(GCPKMS):
 
         return response.plaintext.decode("utf-8") if (decode) else response.plaintext
 
-class Asymmetric(GCPKMS):
+class GCP_Asymmetric(GCP_KMS):
     """Creates an authenticated GCP KMS client that uses asymmetric cryptography operations."""
-    def __init__(self) -> None:
+    def __init__(self, keyVerSecretID: str) -> None:
+        """Constructs a GCP_Asymmetric object.
+
+        Attributes:
+            keyVerSecretID (str):
+                the secret ID of the latest key version that is stored in GCP Secret Manager API
+        """
+        self.__KEY_VERSION_SECRET_ID = keyVerSecretID
         super().__init__()
 
+    def get_latest_ver(self) -> int:
+        """Returns the latest version of the key version that is stored in GCP Secret Manager API."""
+        return int(SECRET_MANAGER.get_secret_payload(secretID=self.__KEY_VERSION_SECRET_ID))
+
     def get_public_key(self, keyID: str, keyRingID: Optional[str] = None, 
-                       version: Optional[int] = None) -> types.PUBLIC_KEY_TYPES:
+                       version: Optional[int] = None, getStr: Optional[bool] = False) -> str | types.PUBLIC_KEY_TYPES:
         """Returns the public key of the provided key ID.
 
         Args:
@@ -215,15 +202,17 @@ class Asymmetric(GCPKMS):
                 the key ring ID (Defaults to KEY_RING_ID attribute of the object)
             version (int):
                 the key version (Defaults to the latest version)
+            getStr (bool):
+                Whether to return the public key in string format (Defaults to False)
 
         Returns:
-            publicKey (types.PUBLIC_KEY_TYPES): the public key
+            publicKey (types.PUBLIC_KEY_TYPES|str): the public key
         """
         if (keyRingID is None):
             keyRingID = self.KEY_RING_ID
 
         if (version is None):
-            version = self.get_latest_key_ver(keyID=keyID, keyRingID=keyRingID)
+            version = self.get_latest_ver()
 
         # Construct the key version name
         keyVersionName = self.KMS_CLIENT.crypto_key_version_path(
@@ -231,31 +220,56 @@ class Asymmetric(GCPKMS):
         )
 
         # Get the public key from Google Cloud KMS API
-        publicKey = self.KMS_CLIENT.get_public_key(request={"name": keyVersionName})
+        publicKey = self.KMS_CLIENT.get_public_key(request={"name": keyVersionName}).pem
+        if (getStr):
+            return publicKey
 
         # Extract and parse the public key as a PEM-encoded RSA public key
         publicKey = serialization.load_pem_public_key(
-            data=publicKey.pem.encode("utf-8"),
+            data=publicKey.encode("utf-8"),
             backend=default_backend()
         )
         return publicKey
 
-class RSA(Asymmetric):
+class GCP_RSA(GCP_Asymmetric):
     """Creates an authenticated GCP KMS client that uses RSA-OAEP-SHA for cryptographic operations."""
-    def __init__(self, digestMethod: Optional[Callable] = hashes.SHA512) -> None:
+    def __init__(self, keyVerSecretID: str, digestMethod: Optional[Callable] = hashes.SHA512) -> None:
+        """Constructs a GCP_RSA object.
+
+        Attributes:
+            keyVerSecretID (str):
+                the secret ID of the latest key version that is stored in GCP Secret Manager API
+            digestMethod (Callable, Optional):
+                The digest method to use (Defaults to SHA512) which must be part of the cryptography module
+        """
         if (not issubclass(digestMethod, hashes.HashAlgorithm)):
             raise TypeError("digestMethod must be a subclass of cryptography.hazmat.primitives.hashes.HashAlgorithm")
 
         self.__DIGEST_METHOD = digestMethod
-        super().__init__()
+        super().__init__(keyVerSecretID=keyVerSecretID)
 
     def encrypt(self, plaintext: str | bytes, keyID: str,
                 keyRingID: Optional[str] = None, version: Optional[int] = None) -> bytes:
+        """Encrypts the plaintext using the provided key ID via GCP KMS API.
+
+        Args:
+            plaintext (str|bytes):
+                The plaintext to encrypt
+            keyID (str):
+                The key ID/name of the key
+            keyRingID (str):
+                The key ring ID (Defaults to KEY_RING_ID attribute of the object)
+            version (int):
+                The key version (Defaults to the latest version)
+
+        Returns:
+            The ciphertext (bytes)
+        """
         if (keyRingID is None):
             keyRingID = self.KEY_RING_ID
 
         if (version is None):
-            version = self.get_latest_key_ver(keyID=keyID, keyRingID=keyRingID)
+            version = self.get_latest_ver()
 
         if (isinstance(plaintext, str)):
             plaintext = plaintext.encode("utf-8")
@@ -264,13 +278,30 @@ class RSA(Asymmetric):
         publicKey = self.get_public_key(keyID=keyID, keyRingID=keyRingID, version=version)
         return rsa_encrypt(plaintext=plaintext, publicKey=publicKey, digestMethod=self.__DIGEST_METHOD)
 
-    def decrypt(self, ciphertext: bytes, keyID: str,
-                keyRingID: Optional[str] = None, version: Optional[int] = None) -> bytes:
+    def decrypt(self, ciphertext: bytes, keyID: str, keyRingID: Optional[str] = None,
+                version: Optional[int] = None, decode: Optional[bool] = False) -> bytes | str:
+        """Encrypts the plaintext using the provided key ID via GCP KMS API.
+
+        Args:
+            ciphertext (bytes):
+                The ciphertext to decrypt
+            keyID (str):
+                The key ID/name of the key
+            keyRingID (str):
+                The key ring ID (Defaults to KEY_RING_ID attribute of the object)
+            version (int):
+                The key version (Defaults to the latest version)
+            decode (bool):
+                If True, the decrypted plaintext is returned as a string (Defaults to False)
+
+        Returns:
+            The plaintext (bytes|str)
+        """
         if (keyRingID is None):
             keyRingID = self.KEY_RING_ID
 
         if (version is None):
-            version = self.get_latest_key_ver(keyID=keyID, keyRingID=keyRingID)
+            version = self.get_latest_ver()
 
         # Construct the key version name
         keyVersionName = self.KMS_CLIENT.crypto_key_version_path(
@@ -297,12 +328,12 @@ class RSA(Asymmetric):
             # response received from Google Cloud KMS API was corrupted in-transit
             raise CRC32ChecksumError("Plaintext CRC32C checksum does not match.")
 
-        return response.plaintext
+        return response.plaintext if (not decode) else response.plaintext.decode("utf-8")
 
-AESGCM = AESGCM()
-RSA = RSA()
+AESGCM = GCP_AESGCM()
+RSA4096 = GCP_RSA(keyVerSecretID=AC.RSA_VERSION_SECRET_ID)
 
 __all__ = [
     "AESGCM",
-    "RSA"
+    "RSA4096"
 ]

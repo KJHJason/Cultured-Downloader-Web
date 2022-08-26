@@ -29,7 +29,7 @@ class SecretManager:
             versionID (str): 
                 The version ID of the secret.
             decodeSecret (bool): 
-                If true, decode the returned secret bytes payload to string type.
+                If true, decode the returned secret bytes payload to string type. (Default: True)
 
         Returns:
             secretPayload (str|bytes): the secret payload

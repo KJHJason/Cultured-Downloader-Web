@@ -14,6 +14,8 @@ class AppConstants:
     DEBUG_MODE: bool = True
 
     # For encrypting/decrypting the saved user's cookie data
+    RSA_KEY_ID: str = "asymmetric-key"
+    RSA_VERSION_SECRET_ID: str = "asymmetric-key-ver"
     COOKIE_ENCRYPTION_KEY: str = "cookie-key"
 
     # For the Google Drive API

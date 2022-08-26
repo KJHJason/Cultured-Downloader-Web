@@ -3,7 +3,7 @@ from flask import request, Blueprint, jsonify, current_app
 
 # import local python libraries
 from functions import send_request
-from classes import AESGCM, APP_CONSTANTS as AC
+from classes import AESGCM, APP_CONSTANTS as AC, RSA4096
 from classes.exceptions import CRC32ChecksumError, DecryptionError
 from .security import LIMITER
 
@@ -24,7 +24,11 @@ def query():
     if (gdriveType != "file" and gdriveType != "folder"):
         return jsonify({"error": "Invalid type"}), 400
 
-    return jsonify(send_request(queryID, gdriveType), 200)
+    return jsonify(send_request(queryID, gdriveType))
+
+@api.route("/rsa/public-key")
+def get_rsa_public_key():
+    return jsonify({"public_key": RSA4096.get_public_key(keyID=AC.RSA_KEY_ID, getStr=True)})
 
 @api.post("/encrypt-cookie")
 def encrypt():
@@ -37,7 +41,7 @@ def encrypt():
     except (CRC32ChecksumError):
         return jsonify({"error": "Integrity checks failed."}), 400
     else:
-        return jsonify({"cookie": encryptedCookieData}), 200
+        return jsonify({"cookie": encryptedCookieData})
 
 @api.post("/decrypt-cookie")
 def decrypt():
@@ -54,4 +58,4 @@ def decrypt():
     except (DecryptionError):
         return jsonify({"error": "Decryption failed."}), 400
     else:
-        return jsonify({"cookie": decryptedCookieData}), 200
+        return jsonify({"cookie": decryptedCookieData})
