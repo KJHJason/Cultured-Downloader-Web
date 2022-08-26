@@ -8,7 +8,6 @@ from google.cloud import secretmanager
 from google_crc32c import Checksum as g_crc32c
 
 # import Python's standard libraries
-from typing import Union
 from six import ensure_binary
 
 # import local python libraries
@@ -19,7 +18,7 @@ else:
     from .constants import CONSTANTS as C
     from .cloud_logger import CLOUD_LOGGER
 
-def crc32c(data:Union[bytes, str]) -> int:
+def crc32c(data:bytes | str) -> int:
     """Calculates the CRC32C checksum of the provided data
 
     Args:
@@ -44,7 +43,7 @@ class SecretManager:
         return self.__SM_CLIENT
 
     def get_secret_payload(self, secretID: str, 
-                           versionID: str = "latest", decodeSecret: bool = True) -> Union[str, bytes]:
+                           versionID: str = "latest", decodeSecret: bool = True) -> str | bytes:
         """Get the secret payload from Google Cloud Secret Manager API.
 
         Args:
@@ -74,7 +73,7 @@ class SecretManager:
         secret = response.payload.data
         return secret.decode("utf-8") if (decodeSecret) else secret
 
-    def upload_new_secret_version(self, secretID: Union[str, bytes] = None, secret: str = None, 
+    def upload_new_secret_version(self, secretID: str | bytes = None, secret: str = None, 
                                   destroyPastVer: bool = False, destroyOptimise: bool = False) -> None:
         """Uploads the new secret to Google Cloud Platform's Secret Manager API.
 

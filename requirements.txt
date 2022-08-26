@@ -3,8 +3,12 @@ setuptools>=60.1.0
 
 # For Flask Web Application
 Flask>=2.0.3
-Flask_Limiter>=2.0.4
 Jinja2>=3.0.3
+
+# For extra security for
+# the Flask web app
+Flask_Limiter>=2.0.4
+flask-talisman>=1.0.0
 
 # Other useful dependencies
 # used in the Flask web app

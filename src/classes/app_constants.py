@@ -29,6 +29,10 @@ class AppConstants:
     # For caching
     BLUEPRINT_ENDPOINT_REGEX: re.Pattern[str] = re.compile(r"^[\w]+(.)[\w]+$")
 
+    # For limiter configurations
+    DEFAULT_REQUEST_LIMIT: str = "15 per second"
+    API_REQUEST_LIMIT: str = "10 per second"
+
 APP_CONSTANTS = AppConstants()
 
 __all__ = [
