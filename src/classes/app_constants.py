@@ -3,7 +3,7 @@ import re
 from dataclasses import dataclass, field
 
 # import local python libraries
-if (__name__ == "__main__"):
+if (__package__ is None or __package__ == ""):
     from secret_manager import SECRET_MANAGER
 else:
     from .secret_manager import SECRET_MANAGER
@@ -13,9 +13,8 @@ class AppConstants:
     """This dataclass is used to store all the constants used in the application."""
     DEBUG_MODE: bool = True
 
-    # For encrypting/decrypting user's saved cookies
-    # which will retrieve a 256-bit key for AES-256-GCM
-    COOKIE_KEY: bytes = SECRET_MANAGER.get_secret_payload(secretID="cookie-encryption-key", decodeSecret=False) 
+    # For encrypting/decrypting the saved user's cookie data
+    COOKIE_ENCRYPTION_KEY: str = "cookie-key"
 
     # For the Google Drive API
     GDRIVE_API_TOKEN: str = SECRET_MANAGER.get_secret_payload(secretID="gdrive-api-token")

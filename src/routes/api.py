@@ -3,6 +3,8 @@ from flask import request, Blueprint, jsonify, current_app
 
 # import local python libraries
 from functions import send_request
+from classes import AES_GCM, APP_CONSTANTS as AC
+from classes.exceptions import CRC32ChecksumError, DecryptionError
 from .security import LIMITER
 
 api = Blueprint("api", __name__, static_folder="static", template_folder="template")
@@ -23,3 +25,33 @@ def query():
         return jsonify({"error": "Invalid type"}), 400
 
     return jsonify(send_request(queryID, gdriveType), 200)
+
+@api.post("/encrypt-cookie")
+def encrypt():
+    cookieData = request.json.get("cookie")
+    if (cookieData is None):
+        return jsonify({"error": "No cookie data was provided."}), 400
+
+    try:
+        encryptedCookieData = AES_GCM.encrypt(cookieData, keyID=AC.COOKIE_ENCRYPTION_KEY)
+    except (CRC32ChecksumError):
+        return jsonify({"error": "Integrity checks failed."}), 400
+    else:
+        return jsonify({"cookie": encryptedCookieData}), 200
+
+@api.post("/decrypt-cookie")
+def decrypt():
+    cookieData = request.json.get("cookie")
+    if (cookieData is None):
+        return jsonify({"error": "No cookie data was provided."}), 400
+
+    try:
+        decryptedCookieData = AES_GCM.decrypt(cookieData, keyID=AC.COOKIE_ENCRYPTION_KEY)
+    except (TypeError):
+        return jsonify({"error": "Encrypted cookie must be in bytes."}), 400
+    except (CRC32ChecksumError):
+        return jsonify({"error": "Integrity checks failed, please try again."}), 400
+    except (DecryptionError):
+        return jsonify({"error": "Decryption failed."}), 400
+    else:
+        return jsonify({"cookie": decryptedCookieData}), 200

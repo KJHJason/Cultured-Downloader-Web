@@ -3,16 +3,15 @@ from google.cloud import logging as gcp_logging
 from google.cloud.logging.handlers import CloudLoggingHandler
 
 # import Python's standard libraries
-import json
 import pathlib
 from typing import Optional
 from inspect import stack, getframeinfo
 
 # import local python libraries
-if (__name__ == "__main__"):
-    from constants import CONSTANTS as C
+if (__package__ is None or __package__ == ""):
+    from initialise import CONSTANTS as C
 else:
-    from .constants import CONSTANTS as C
+    from .initialise import CONSTANTS as C
 
 class CloudLogger:
     def __init__(self) -> None:

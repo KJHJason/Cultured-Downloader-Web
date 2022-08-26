@@ -4,32 +4,13 @@ import google.api_core.exceptions as GoogleErrors
 # For Google SM (Secret Manager) API (Third-party libraries)
 from google.cloud import secretmanager
 
-# import third-party libraries
-from google_crc32c import Checksum as g_crc32c
-
-# import Python's standard libraries
-from six import ensure_binary
-
 # import local python libraries
-if (__name__ == "__main__"):
-    from constants import CONSTANTS as C
+if (__package__ is None or __package__ == ""):
+    from initialise import CONSTANTS as C, crc32c
     from cloud_logger import CLOUD_LOGGER
 else:
-    from .constants import CONSTANTS as C
+    from .initialise import CONSTANTS as C, crc32c
     from .cloud_logger import CLOUD_LOGGER
-
-def crc32c(data:bytes | str) -> int:
-    """Calculates the CRC32C checksum of the provided data
-
-    Args:
-        data (str|bytes): 
-            The bytes of the data which the checksum should be calculated.
-            If the data is in string format, it will be encoded to bytes.
-
-    Returns:
-        An int representing the CRC32C checksum of the provided bytes
-    """
-    return int(g_crc32c(initial_value=ensure_binary(data)).hexdigest(), 16)
 
 class SecretManager:
     """Creates a Secret Manager client that can be used to retrieve secrets from GCP."""
@@ -37,10 +18,6 @@ class SecretManager:
         self.__SM_CLIENT = secretmanager.SecretManagerServiceClient.from_service_account_json(
             filename=C.CONFIG_DIR_PATH.joinpath("google-sm.json")
         )
-
-    @property
-    def SM_CLIENT(self) -> secretmanager.SecretManagerServiceClient:
-        return self.__SM_CLIENT
 
     def get_secret_payload(self, secretID: str, 
                            versionID: str = "latest", decodeSecret: bool = True) -> str | bytes:
