@@ -2,15 +2,15 @@
 from flask import request, Blueprint, jsonify, current_app
 
 # import local python libraries
-from functions import send_request
-from classes import AESGCM, APP_CONSTANTS as AC, RSA4096
+from functions import send_request, validate_schema
+from classes import APP_CONSTANTS as AC, USER_COOKIE
 from classes.exceptions import CRC32ChecksumError, DecryptionError
 from .security import LIMITER
 
 api = Blueprint("api", __name__, static_folder="static", template_folder="template")
 LIMITER.limit(limit_value=current_app.config["APP_CONSTANTS"].API_REQUEST_LIMIT)(api)
 
-@api.post("/query")
+@api.post("/api/v1/query")
 def query():
     dataPayload = request.json.get("data")
     if (dataPayload is None):
@@ -26,36 +26,57 @@ def query():
 
     return jsonify(send_request(queryID, gdriveType))
 
-@api.route("/rsa/public-key")
+@api.get("/api/v1/rsa/public-key")
 def get_rsa_public_key():
-    return jsonify({"public_key": RSA4096.get_public_key(keyID=AC.RSA_KEY_ID, getStr=True)})
+    return jsonify({"public_key": USER_COOKIE.get_api_public_key()})
 
-@api.post("/encrypt-cookie")
+@api.post("/api/v1/encrypt-cookie")
 def encrypt():
-    cookieData = request.json.get("cookie")
-    if (cookieData is None):
-        return jsonify({"error": "No cookie data was provided."}), 400
+    jsonPayload = request.json
+    if (not validate_schema(schema=AC.USER_SENT_COOKIE_SCHEMA, data=jsonPayload)):
+        return jsonify(
+            {"error": "Invalid json format, please refer to the schema below and try again.",
+            "schema": AC.USER_SENT_COOKIE_SCHEMA}
+        ), 400
+
+    cookiePayload = USER_COOKIE.decrypt_cookie_payload(jsonPayload["cookie"])
+    if ("error" in cookiePayload):
+        return jsonify(cookiePayload), 400
 
     try:
-        encryptedCookieData = AESGCM.encrypt(cookieData, keyID=AC.COOKIE_ENCRYPTION_KEY)
+        encryptedCookieData = USER_COOKIE.encrypt_cookie_data(
+            cookieData=cookiePayload["payload"],
+            userPublicKey=jsonPayload["public_key"]
+        )
     except (CRC32ChecksumError):
         return jsonify({"error": "Integrity checks failed."}), 400
-    else:
-        return jsonify({"cookie": encryptedCookieData})
 
-@api.post("/decrypt-cookie")
+    return jsonify({"cookie": encryptedCookieData})
+
+@api.post("/api/v1/decrypt-cookie")
 def decrypt():
-    cookieData = request.json.get("cookie")
-    if (cookieData is None):
-        return jsonify({"error": "No cookie data was provided."}), 400
+    jsonPayload = request.json
+    if (not validate_schema(schema=AC.USER_SENT_COOKIE_SCHEMA, data=jsonPayload)):
+        return jsonify(
+            {"error": "Invalid json format, please refer to the schema below and try again.",
+            "schema": AC.USER_SENT_COOKIE_SCHEMA}
+        ), 400
 
+    encryptedCookiePayload = USER_COOKIE.decrypt_cookie_payload(jsonPayload["cookie"])
+    if ("error" in encryptedCookiePayload):
+        return jsonify(encryptedCookiePayload), 400
+
+    print(encryptedCookiePayload)
     try:
-        decryptedCookieData = AESGCM.decrypt(cookieData, keyID=AC.COOKIE_ENCRYPTION_KEY)
+        decryptedCookieData = USER_COOKIE.decrypt_cookie_data(
+            encryptedCookieData=encryptedCookiePayload["payload"], 
+            userPublicKey=jsonPayload["public_key"]
+        )
     except (TypeError):
         return jsonify({"error": "Encrypted cookie must be in bytes."}), 400
     except (CRC32ChecksumError):
         return jsonify({"error": "Integrity checks failed, please try again."}), 400
     except (DecryptionError):
         return jsonify({"error": "Decryption failed."}), 400
-    else:
-        return jsonify({"cookie": decryptedCookieData})
+
+    return jsonify({"cookie": decryptedCookieData})

@@ -11,8 +11,9 @@ from cryptography.hazmat.primitives.asymmetric import types
 
 # import Python's standard libraries
 import json
+import base64
 from typing import Optional, Callable, Any
-from base64 import urlsafe_b64encode
+from binascii import Error as BinasciiError
 
 # import local python libraries
 if (__package__ is None or __package__ == ""):
@@ -41,7 +42,7 @@ class GCP_KMS:
     def log_failed_decryption(self, ciphertext: bytes, error: Any) -> None:
         """Logs the failed decryption attempt to the Cloud Logger and raise DecryptionError."""
         try:
-            ciphertextToLog = urlsafe_b64encode(ciphertext).decode("utf-8")
+            ciphertextToLog = base64.urlsafe_b64encode(ciphertext).decode("utf-8")
         except:
             ciphertextToLog = "Could not url-safe base64 encode the ciphertext..."
 
@@ -66,10 +67,17 @@ class GCP_KMS:
 
 class GCP_AESGCM(GCP_KMS):
     """Creates an authenticated GCP KMS client that uses AES-256-GCM for cryptographic operations."""
-    def __init__(self) -> None:
+    def __init__(self, keyID: Optional[str] = None) -> None:
+        """Constructor for GCP_AESGCM
+
+        Attributes:
+            keyID (str):
+                The default key ID to use for encryption/decryption (Defaults to None)
+        """
+        self.KEY_ID = keyID
         super().__init__()
 
-    def encrypt(self, plaintext: str | bytes, keyID: str, keyRingID: Optional[str] = None) -> bytes:
+    def symmetric_encrypt(self, plaintext: str | bytes, keyID: Optional[str] = None, keyRingID: Optional[str] = None) -> bytes:
         """Using AES-256-GCM to encrypt the provided plaintext via GCP KMS.
 
         Args:
@@ -78,15 +86,22 @@ class GCP_AESGCM(GCP_KMS):
             keyRingID (str): 
                 the key ring ID (Defaults to KEY_RING_ID attribute of the object)
             keyID (str): 
-                the key ID/name of the key
+                the key ID/name of the key (Defaults to KEY_ID attribute of the object)
 
         Returns:
             ciphertext (bytes): the ciphertext in bytes format
 
         Raises:
+            ValueError:
+                If the keyID is not provided
             CRC32ChecksumError:
                 If the integrity checks failed
         """
+        if (keyID is None):
+            if (self.KEY_ID is None):
+                raise ValueError("Please provide a key ID.")
+            keyID = self.KEY_ID
+
         if (keyRingID is None):
             keyRingID = self.KEY_RING_ID
 
@@ -117,7 +132,7 @@ class GCP_AESGCM(GCP_KMS):
 
         return response.ciphertext
 
-    def decrypt(self, ciphertext: bytes, keyID: str, 
+    def symmetric_decrypt(self, ciphertext: bytes, keyID: Optional[str] = None, 
                 keyRingID: Optional[str] = None, decode: Optional[bool] = False) -> str | bytes:
         """Using AES-256-GCM to decrypt the provided ciphertext via GCP KMS.
 
@@ -127,7 +142,7 @@ class GCP_AESGCM(GCP_KMS):
             keyRingID (str): 
                 the key ring ID (Defaults to KEY_RING_ID attribute of the object)
             keyID (str): 
-                the key ID/name of the key
+                the key ID/name of the key (Defaults to KEY_ID attribute of the object)
             decode (bool): 
                 whether to decode the decrypted plaintext to string (Defaults to True)
 
@@ -137,6 +152,8 @@ class GCP_AESGCM(GCP_KMS):
         Raises:
             TypeError: 
                 If the ciphertext is not bytes
+            ValueError:
+                If the keyID is not provided
             DecryptionError: 
                 If the decryption failed
             CRC32ChecksumError: 
@@ -146,7 +163,13 @@ class GCP_AESGCM(GCP_KMS):
             ciphertext = bytes(ciphertext)
 
         if (not isinstance(ciphertext, bytes)):
+            print("cipher", ciphertext)
             raise TypeError(f"The ciphertext, {ciphertext} is in \"{type(ciphertext)}\" format. Please pass in a bytes type variable.")
+
+        if (keyID is None):
+            if (self.KEY_ID is None):
+                raise ValueError("Please provide a key ID.")
+            keyID = self.KEY_ID
 
         if (keyRingID is None):
             keyRingID = self.KEY_RING_ID
@@ -177,37 +200,49 @@ class GCP_AESGCM(GCP_KMS):
 
 class GCP_Asymmetric(GCP_KMS):
     """Creates an authenticated GCP KMS client that uses asymmetric cryptography operations."""
-    def __init__(self, keyVerSecretID: str) -> None:
-        """Constructs a GCP_Asymmetric object.
+    def __init__(self, keyVerSecretID: str, keyID: Optional[str] = None) -> None:
+        """Constructor for GCP_Asymmetric
 
         Attributes:
             keyVerSecretID (str):
                 the secret ID of the latest key version that is stored in GCP Secret Manager API
+            keyID (str):
+                The default key ID to use for encryption/decryption (Defaults to None)
         """
         self.__KEY_VERSION_SECRET_ID = keyVerSecretID
+        self.KEY_ID = keyID
         super().__init__()
 
     def get_latest_ver(self) -> int:
         """Returns the latest version of the key version that is stored in GCP Secret Manager API."""
         return int(SECRET_MANAGER.get_secret_payload(secretID=self.__KEY_VERSION_SECRET_ID))
 
-    def get_public_key(self, keyID: str, keyRingID: Optional[str] = None, 
-                       version: Optional[int] = None, getStr: Optional[bool] = False) -> str | types.PUBLIC_KEY_TYPES:
+    def get_public_key(self, keyID: Optional[str] = None, 
+                       keyRingID: Optional[str] = None, version: Optional[int] = None) -> str:
         """Returns the public key of the provided key ID.
 
         Args:
             keyID (str): 
-                the key ID/name of the key
+                the key ID/name of the key (Defaults to KEY_ID attribute of the object)
             keyRingID (str): 
                 the key ring ID (Defaults to KEY_RING_ID attribute of the object)
             version (int):
                 the key version (Defaults to the latest version)
-            getStr (bool):
-                Whether to return the public key in string format (Defaults to False)
 
         Returns:
-            publicKey (types.PUBLIC_KEY_TYPES|str): the public key
+            publicKey (str):
+                The public key which will have to be serialised to a PEM format later
+                in order to use it for cryptographic operations.
+
+        Raises:
+            ValueError:
+                If the keyID is not provided
         """
+        if (keyID is None):
+            if (self.KEY_ID is None):
+                raise ValueError("Please provide a key ID.")
+            keyID = self.KEY_ID
+
         if (keyRingID is None):
             keyRingID = self.KEY_RING_ID
 
@@ -220,21 +255,13 @@ class GCP_Asymmetric(GCP_KMS):
         )
 
         # Get the public key from Google Cloud KMS API
-        publicKey = self.KMS_CLIENT.get_public_key(request={"name": keyVersionName}).pem
-        if (getStr):
-            return publicKey
-
-        # Extract and parse the public key as a PEM-encoded RSA public key
-        publicKey = serialization.load_pem_public_key(
-            data=publicKey.encode("utf-8"),
-            backend=default_backend()
-        )
-        return publicKey
+        return self.KMS_CLIENT.get_public_key(request={"name": keyVersionName}).pem
 
 class GCP_RSA(GCP_Asymmetric):
     """Creates an authenticated GCP KMS client that uses RSA-OAEP-SHA for cryptographic operations."""
-    def __init__(self, keyVerSecretID: str, digestMethod: Optional[Callable] = hashes.SHA512) -> None:
-        """Constructs a GCP_RSA object.
+    def __init__(self, keyVerSecretID: str, keyID: Optional[str] = None, 
+                 digestMethod: Optional[Callable] = hashes.SHA512) -> None:
+        """Constructor for GCP_RSA
 
         Attributes:
             keyVerSecretID (str):
@@ -246,17 +273,17 @@ class GCP_RSA(GCP_Asymmetric):
             raise TypeError("digestMethod must be a subclass of cryptography.hazmat.primitives.hashes.HashAlgorithm")
 
         self.__DIGEST_METHOD = digestMethod
-        super().__init__(keyVerSecretID=keyVerSecretID)
+        super().__init__(keyID=keyID, keyVerSecretID=keyVerSecretID)
 
-    def encrypt(self, plaintext: str | bytes, keyID: str,
+    def asymmetric_encrypt(self, plaintext: str | bytes, keyID: Optional[str] = None,
                 keyRingID: Optional[str] = None, version: Optional[int] = None) -> bytes:
-        """Encrypts the plaintext using the provided key ID via GCP KMS API.
+        """Encrypts the plaintext using RSA-OAEP-SHA via GCP KMS API.
 
         Args:
             plaintext (str|bytes):
                 The plaintext to encrypt
             keyID (str):
-                The key ID/name of the key
+                The key ID/name of the key (Defaults to KEY_ID attribute of the object)
             keyRingID (str):
                 The key ring ID (Defaults to KEY_RING_ID attribute of the object)
             version (int):
@@ -264,7 +291,16 @@ class GCP_RSA(GCP_Asymmetric):
 
         Returns:
             The ciphertext (bytes)
+
+        Raises:
+            ValueError:
+                If the keyID is not provided
         """
+        if (keyID is None):
+            if (self.KEY_ID is None):
+                raise ValueError("Please provide a key ID.")
+            keyID = self.KEY_ID
+
         if (keyRingID is None):
             keyRingID = self.KEY_RING_ID
 
@@ -278,15 +314,15 @@ class GCP_RSA(GCP_Asymmetric):
         publicKey = self.get_public_key(keyID=keyID, keyRingID=keyRingID, version=version)
         return rsa_encrypt(plaintext=plaintext, publicKey=publicKey, digestMethod=self.__DIGEST_METHOD)
 
-    def decrypt(self, ciphertext: bytes, keyID: str, keyRingID: Optional[str] = None,
-                version: Optional[int] = None, decode: Optional[bool] = False) -> bytes | str:
-        """Encrypts the plaintext using the provided key ID via GCP KMS API.
+    def asymmetric_decrypt(self, ciphertext: bytes, keyID: Optional[str] = None, 
+                keyRingID: Optional[str] = None, version: Optional[int] = None, decode: Optional[bool] = False) -> bytes | str:
+        """Encrypts the plaintext using RSA-OAEP-SHA via GCP KMS API.
 
         Args:
             ciphertext (bytes):
                 The ciphertext to decrypt
             keyID (str):
-                The key ID/name of the key
+                The key ID/name of the key (Defaults to KEY_ID attribute of the object)
             keyRingID (str):
                 The key ring ID (Defaults to KEY_RING_ID attribute of the object)
             version (int):
@@ -296,7 +332,18 @@ class GCP_RSA(GCP_Asymmetric):
 
         Returns:
             The plaintext (bytes|str)
+
+        Raises:
+            DecryptionError: 
+                If the decryption failed
+            ValueError:
+                If the keyID is not provided
         """
+        if (keyID is None):
+            if (self.KEY_ID is None):
+                raise ValueError("Please provide a key ID.")
+            keyID = self.KEY_ID
+
         if (keyRingID is None):
             keyRingID = self.KEY_RING_ID
 
@@ -330,10 +377,106 @@ class GCP_RSA(GCP_Asymmetric):
 
         return response.plaintext if (not decode) else response.plaintext.decode("utf-8")
 
-AESGCM = GCP_AESGCM()
-RSA4096 = GCP_RSA(keyVerSecretID=AC.RSA_VERSION_SECRET_ID)
+class UserCookie(GCP_RSA, GCP_AESGCM):
+    """Creates an authenticated GCP KMS client that uses RSA-OAEP-SHA and 
+    AES-256-GCM for cryptographic operations with the user's cookies.
+    """
+    def __init__(self, digestMethod: Optional[Callable] = hashes.SHA512) -> None:
+        """Constructor for UserCookie
+
+        Attributes:
+            digestMethod (Callable, Optional):
+                The digest method to use (Defaults to SHA512) which must be part of the cryptography module
+        """
+        self.__RSA_KEY = AC.RSA_KEY_ID
+        self.__AES_KEY = AC.COOKIE_ENCRYPTION_KEY
+        super().__init__(keyVerSecretID=AC.RSA_VERSION_SECRET_ID, digestMethod=digestMethod)
+
+    def get_api_public_key(self) -> str:
+        """Gets the public key of the Cultured Downloader API."""
+        return self.get_public_key(keyID=self.__RSA_KEY)
+
+    def encrypt_cookie_data(self, cookieData: str | dict, userPublicKey: str) -> str:
+        """Encrypts the cookie data using AES-256-GCM via GCP KMS API.
+
+        Args:
+            cookieData (str, dict):
+                The cookieData to encrypt
+            userPublicKey (str):
+                The public key of the user
+
+        Returns:
+            The base64 encoded ciphertext in string format (utf-8 decoded)
+
+        Raises:
+            ValueError:
+                If the keyID is not provided
+            CRC32ChecksumError:
+                If the integrity checks failed
+        """
+        if (isinstance(cookieData, dict)):
+            cookieData = json.dumps(cookieData).encode("utf-8")
+
+        encryptedCookieData = rsa_encrypt(
+            plaintext=self.symmetric_encrypt(
+                plaintext=cookieData,
+                keyID=self.__AES_KEY
+            ),
+            publicKey=userPublicKey
+        )
+        return base64.b64encode(encryptedCookieData).decode("utf-8")
+
+    def decrypt_cookie_data(self, encryptedCookieData: bytes, userPublicKey: str) -> str:
+        """Decrypts the cookie data using AES-256-GCM via GCP KMS API.
+
+        Args:
+            encryptedCookieData (bytes):
+                The encrypted cookie data to decrypt
+            userPublicKey (str):
+                The public key of the user
+
+        Returns:
+            The base64 encoded ciphertext in string format (utf-8 decoded)
+
+        Raises:
+            ValueError:
+                If the keyID is not provided
+            CRC32ChecksumError:
+                If the integrity checks failed
+        """
+        cookieData = rsa_encrypt(
+            plaintext=self.symmetric_decrypt(
+                ciphertext=encryptedCookieData,
+                keyID=self.__AES_KEY
+            ),
+            publicKey=userPublicKey
+        )
+        return base64.b64encode(cookieData).decode("utf-8")
+
+    def decrypt_cookie_payload(self, encryptedCookie: bytes) -> dict:
+        """Decrypts the cookie payload that was sent to the API using the API's private key.
+
+        Args:
+            encryptedCookie (bytes): 
+                The cookie data to decrypt.
+
+        Returns:
+            The decrypted cookie data (dict).
+        """
+        try:
+            encryptedCookie = base64.b64decode(encryptedCookie)
+        except (BinasciiError, ValueError, TypeError):
+            return {"error": "Failed to base64 decode the cookie ciphertext."}
+
+        try:
+            return {"payload": self.asymmetric_decrypt(ciphertext=encryptedCookie, keyID=self.__RSA_KEY)}
+        except (DecryptionError):
+            return {"error": "Failed to decrypt the cookie ciphertext."}
+
+USER_COOKIE = UserCookie()
 
 __all__ = [
-    "AESGCM",
-    "RSA4096"
+    "GCP_RSA",
+    "GCP_AESGCM",
+    "USER_COOKIE"
 ]

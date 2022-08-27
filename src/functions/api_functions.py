@@ -1,9 +1,30 @@
 # import third party libraries
 import requests
 from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
+import jsonschema
 
 # import local python libraries
 from classes import APP_CONSTANTS as AC
+
+def validate_schema(schema: dict, data: dict) -> bool:
+    """Validates the data against the schema
+
+    Args:
+        schema (dict): 
+            The schema to validate against
+        data (dict):
+            The data to validate
+
+    Returns:
+        bool:
+            True if the data is valid, False otherwise
+    """
+    try:
+        jsonschema.validate(data, schema)
+    except (jsonschema.exceptions.ValidationError):
+        return False
+    else:
+        return True
 
 def send_request(gdriveID: str, gdriveType: str) -> dict:
     """Sends a request to the Google Drive API to get the 

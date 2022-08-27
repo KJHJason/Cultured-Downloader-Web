@@ -17,6 +17,16 @@ class AppConstants:
     RSA_KEY_ID: str = "asymmetric-key"
     RSA_VERSION_SECRET_ID: str = "asymmetric-key-ver"
     COOKIE_ENCRYPTION_KEY: str = "cookie-key"
+    USER_SENT_COOKIE_SCHEMA: dict[str, str] = field(
+        default_factory=lambda: {
+            "type": "object",
+            "properties": {
+                "cookie": {"type": "string"},
+                "public_key": {"type": "string"}
+            },
+            "required": ["cookie", "public_key"]
+        }
+    )
 
     # For the Google Drive API
     GDRIVE_API_TOKEN: str = SECRET_MANAGER.get_secret_payload(secretID="gdrive-api-token")
