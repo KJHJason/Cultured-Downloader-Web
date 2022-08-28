@@ -103,9 +103,8 @@ app.logger.addHandler(app.config["CLOUD_LOGGER"].GOOGLE_LOGGING_HANDLER)
 """--------------------------- Start of App Routes ---------------------------"""
 
 with app.app_context():
-    from routes import general, api
+    from routes import general
     app.register_blueprint(general)
-    app.register_blueprint(api)
 
 """--------------------------- End of App Routes ---------------------------"""
 
