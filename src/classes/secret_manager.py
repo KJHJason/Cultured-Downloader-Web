@@ -3,6 +3,7 @@ import google.api_core.exceptions as GoogleErrors
 
 # For Google SM (Secret Manager) API (Third-party libraries)
 from google.cloud import secretmanager
+from google.cloud.secretmanager_v1.types import resources
 
 # import local python libraries
 if (__package__ is None or __package__ == ""):
@@ -51,7 +52,7 @@ class SecretManager:
         return secret.decode("utf-8") if (decodeSecret) else secret
 
     def upload_new_secret_version(self, secretID: str | bytes = None, secret: str = None, 
-                                  destroyPastVer: bool = False, destroyOptimise: bool = False) -> None:
+                                  destroyPastVer: bool | None = False, destroyOptimise: bool | None = False) -> resources.SecretVersion:
         """Uploads the new secret to Google Cloud Platform's Secret Manager API.
 
         Args:
@@ -59,21 +60,22 @@ class SecretManager:
                 The ID of the secret to upload
             secret (str|bytes): 
                 The secret to upload
-            destroyPastVer (bool): 
+            destroyPastVer (bool, optional): 
                 Whether to destroy the past version of the secret or not
-            destroyOptimise (bool): 
+            destroyOptimise (bool, optional): 
                 Whether to optimise the process of destroying the past version of the secret
                 Note: This should be True if the past versions have consistently been destroyed
 
         Returns:
-            None
+            secretVersion (resources.SecretVersion): 
+                The response from GCP Secret Manager API
         """
         # construct the secret path to the secret key ID
         secretPath = self.__SM_CLIENT.secret_path(C.GOOGLE_PROJECT_NAME, secretID)
 
         # encode the secret to bytes if secret is in string format
         if (isinstance(secret, str)):
-            secret = secret.encode()
+            secret = secret.encode("utf-8")
 
         # calculate the payload crc32c checksum
         crc32cChecksum = crc32c(secret)
@@ -82,29 +84,44 @@ class SecretManager:
         response = self.__SM_CLIENT.add_secret_version(
             parent=secretPath, payload={"data": secret, "data_crc32c": crc32cChecksum}
         )
+
+        # get the latest secret version and log the action
+        latestVer = int(response.name.rsplit(sep="/", maxsplit=1)[1])
         CLOUD_LOGGER.info(
             content={
                 "message": f"Secret {secretID} (version {latestVer}) created successfully!",
-                "details": response
+                "details": {
+                    "created": str(response.create_time)
+                }
             }
         )
 
         # disable all past versions if destroyPastVer is True
         if (destroyPastVer):
-            # get the latest secret version
-            latestVer = int(response.name.split("/")[-1])
             for version in range(latestVer - 1, 0, -1):
                 secretVersionPath = self.__SM_CLIENT.secret_version_path(C.GOOGLE_PROJECT_NAME, secretID, version)
                 try:
-                    self.__SM_CLIENT.destroy_secret_version(request={"name": secretVersionPath})
+                    deleteRes = self.__SM_CLIENT.destroy_secret_version(
+                        request={"name": secretVersionPath}
+                    )
+                    CLOUD_LOGGER.info(
+                        content={
+                            "message": f"Secret {secretID} (version {version}) destroyed successfully!",
+                            "details": {
+                                "destroyed": str(deleteRes.destroy_time)
+                            }
+                        }
+                    )
                 except (GoogleErrors.FailedPrecondition):
                     # key is already destroyed
                     if (destroyOptimise):
                         break
 
             CLOUD_LOGGER.info(
-                content=f"Successfully destroyed all past versions of the secret {secretID}",
+                content=f"Successfully destroyed all past versions of the secret {secretID}"
             )
+
+        return response
 
 SECRET_MANAGER = SecretManager()
 
