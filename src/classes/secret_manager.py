@@ -42,7 +42,7 @@ class SecretManager:
             response = self.__SM_CLIENT.access_secret_version(request={"name": secretName})
         except (GoogleErrors.NotFound) as e:
             # secret version not found
-            print("Error caught:")
+            print("Could not find secret:")
             print(e, end="\n\n")
             return
 
@@ -82,12 +82,11 @@ class SecretManager:
         response = self.__SM_CLIENT.add_secret_version(
             parent=secretPath, payload={"data": secret, "data_crc32c": crc32cChecksum}
         )
-        CLOUD_LOGGER.write_log_entry(
-            logMessage={
+        CLOUD_LOGGER.info(
+            content={
                 "message": f"Secret {secretID} (version {latestVer}) created successfully!",
                 "details": response
-            },
-            severity="INFO"
+            }
         )
 
         # disable all past versions if destroyPastVer is True
@@ -103,9 +102,8 @@ class SecretManager:
                     if (destroyOptimise):
                         break
 
-            CLOUD_LOGGER.write_log_entry(
-                logMessage=f"Successfully destroyed all past versions of the secret {secretID}",
-                severity="INFO"
+            CLOUD_LOGGER.info(
+                content=f"Successfully destroyed all past versions of the secret {secretID}",
             )
 
 SECRET_MANAGER = SecretManager()

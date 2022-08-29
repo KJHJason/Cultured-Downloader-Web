@@ -1,6 +1,6 @@
 # import Python's standard libraries
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 @dataclass(frozen=True, repr=False)
 class AppConstants:

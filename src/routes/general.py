@@ -15,7 +15,7 @@ def favicon() -> make_response:
     return send_from_directory(
         directory=pathlib.Path(current_app.root_path).joinpath("static", "images", "icons"),
         path="favicon.ico",
-        mimetype="image/vnd.microsoft.icon"
+        mimetype="image/x-icon"
     )
 
 @general.route("/")
