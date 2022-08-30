@@ -5,6 +5,9 @@ import google.api_core.exceptions as GoogleErrors
 from google.cloud import secretmanager
 from google.cloud.secretmanager_v1.types import resources
 
+# import Python's standard libraries
+import warnings
+
 # import local python libraries
 if (__package__ is None or __package__ == ""):
     from initialise import CONSTANTS as C, crc32c
@@ -20,49 +23,51 @@ class SecretManager:
             filename=C.CONFIG_DIR_PATH.joinpath("google-sm.json")
         )
 
-    def get_secret_payload(self, secretID: str, 
-                           versionID: str = "latest", decodeSecret: bool = True) -> str | bytes:
+    def get_secret_payload(self, secret_id: str, 
+                           version_id: str = "latest", decode_secret: bool = True) -> str | bytes:
         """Get the secret payload from Google Cloud Secret Manager API.
 
         Args:
-            secretID (str): 
+            secret_id (str): 
                 The ID of the secret.
-            versionID (str): 
+            version_id (str): 
                 The version ID of the secret.
-            decodeSecret (bool): 
+            decode_secret (bool): 
                 If true, decode the returned secret bytes payload to string type. (Default: True)
 
         Returns:
             secretPayload (str|bytes): the secret payload
         """
         # construct the resource name of the secret version
-        secretName = self.__SM_CLIENT.secret_version_path(C.GOOGLE_PROJECT_NAME, secretID, versionID)
+        secret_name = self.__SM_CLIENT.secret_version_path(C.GOOGLE_PROJECT_NAME, secret_id, version_id)
 
         # get the secret version
         try:
-            response = self.__SM_CLIENT.access_secret_version(request={"name": secretName})
+            response = self.__SM_CLIENT.access_secret_version(request={"name": secret_name})
         except (GoogleErrors.NotFound) as e:
             # secret version not found
-            print("Could not find secret:")
-            print(e, end="\n\n")
+            warnings.warn(
+                message=f"Secret {secret_id} (version {version_id}) not found!\n{e}",
+                category=RuntimeWarning
+            )
             return
 
         # return the secret payload
         secret = response.payload.data
-        return secret.decode("utf-8") if (decodeSecret) else secret
+        return secret.decode("utf-8") if (decode_secret) else secret
 
-    def upload_new_secret_version(self, secretID: str | bytes = None, secret: str = None, 
-                                  destroyPastVer: bool | None = False, destroyOptimise: bool | None = False) -> resources.SecretVersion:
+    def upload_new_secret_version(self, secret_id: str | bytes = None, secret: str = None, 
+                                  destroy_past_ver: bool = False, destroy_optimise: bool = False) -> resources.SecretVersion:
         """Uploads the new secret to Google Cloud Platform's Secret Manager API.
 
         Args:
-            secretID (str): 
+            secret_id (str): 
                 The ID of the secret to upload
             secret (str|bytes): 
                 The secret to upload
-            destroyPastVer (bool, optional): 
+            destroy_past_ver (bool): 
                 Whether to destroy the past version of the secret or not
-            destroyOptimise (bool, optional): 
+            destroy_optimise (bool): 
                 Whether to optimise the process of destroying the past version of the secret
                 Note: This should be True if the past versions have consistently been destroyed
 
@@ -71,54 +76,54 @@ class SecretManager:
                 The response from GCP Secret Manager API
         """
         # construct the secret path to the secret key ID
-        secretPath = self.__SM_CLIENT.secret_path(C.GOOGLE_PROJECT_NAME, secretID)
+        secret_path = self.__SM_CLIENT.secret_path(C.GOOGLE_PROJECT_NAME, secret_id)
 
         # encode the secret to bytes if secret is in string format
         if (isinstance(secret, str)):
             secret = secret.encode("utf-8")
 
         # calculate the payload crc32c checksum
-        crc32cChecksum = crc32c(secret)
+        crc32c_checksum = crc32c(secret)
 
         # Add the secret version and send to Google Secret Management API
         response = self.__SM_CLIENT.add_secret_version(
-            parent=secretPath, payload={"data": secret, "data_crc32c": crc32cChecksum}
+            parent=secret_path, payload={"data": secret, "data_crc32c": crc32c_checksum}
         )
 
         # get the latest secret version and log the action
-        latestVer = int(response.name.rsplit(sep="/", maxsplit=1)[1])
+        latest_ver = int(response.name.rsplit(sep="/", maxsplit=1)[1])
         CLOUD_LOGGER.info(
             content={
-                "message": f"Secret {secretID} (version {latestVer}) created successfully!",
+                "message": f"Secret {secret_id} (version {latest_ver}) created successfully!",
                 "details": {
                     "created": str(response.create_time)
                 }
             }
         )
 
-        # disable all past versions if destroyPastVer is True
-        if (destroyPastVer):
-            for version in range(latestVer - 1, 0, -1):
-                secretVersionPath = self.__SM_CLIENT.secret_version_path(C.GOOGLE_PROJECT_NAME, secretID, version)
+        # disable all past versions if destroy_past_ver is True
+        if (destroy_past_ver):
+            for version in range(latest_ver - 1, 0, -1):
+                secret_version_path = self.__SM_CLIENT.secret_version_path(C.GOOGLE_PROJECT_NAME, secret_id, version)
                 try:
-                    deleteRes = self.__SM_CLIENT.destroy_secret_version(
-                        request={"name": secretVersionPath}
+                    delete_res = self.__SM_CLIENT.destroy_secret_version(
+                        request={"name": secret_version_path}
                     )
                     CLOUD_LOGGER.info(
                         content={
-                            "message": f"Secret {secretID} (version {version}) destroyed successfully!",
+                            "message": f"Secret {secret_id} (version {version}) destroyed successfully!",
                             "details": {
-                                "destroyed": str(deleteRes.destroy_time)
+                                "destroyed": str(delete_res.destroy_time)
                             }
                         }
                     )
                 except (GoogleErrors.FailedPrecondition):
                     # key is already destroyed
-                    if (destroyOptimise):
+                    if (destroy_optimise):
                         break
 
             CLOUD_LOGGER.info(
-                content=f"Successfully destroyed all past versions of the secret {secretID}"
+                content=f"Successfully destroyed all past versions of the secret {secret_id}"
             )
 
         return response

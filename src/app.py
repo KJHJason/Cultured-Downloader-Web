@@ -24,11 +24,11 @@ app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024 # 1MiB
 
 # Flask session cryptographic configurations
 app.config["SECRET_KEY"] = SECRET_MANAGER.get_secret_payload(
-    secretID="flask-secret-key", decodeSecret=False
+    secret_id="flask-secret-key", decode_secret=False
 )
 FLASK_SESSION_COOKIE_INTERFACE = SecureCookieSessionInterface()
 FLASK_SESSION_COOKIE_INTERFACE.salt = SECRET_MANAGER.get_secret_payload(
-    secretID="flask-session-salt", decodeSecret=False
+    secret_id="flask-session-salt", decode_secret=False
 )
 FLASK_SESSION_COOKIE_INTERFACE.digest_method = staticmethod(hashlib.sha512)
 app.session_interface = FLASK_SESSION_COOKIE_INTERFACE
@@ -81,10 +81,10 @@ TALISMAN = Talisman(
     # to automatically use HTTPS for the next 1 year
     # to prevents MITM attacks.
     # Note: HSTS is also enabled on our custom domain via Cloudflare
-    strict_transport_security=True,
-    strict_transport_security_preload=True,
+    strict_transport_security=not AC.DEBUG_MODE,
+    strict_transport_security_preload=not AC.DEBUG_MODE,
     strict_transport_security_max_age=31536000, # 1 year
-    strict_transport_security_include_subdomains=True,
+    strict_transport_security_include_subdomains=not AC.DEBUG_MODE,
 
     # Flask session cookie configurations
     session_cookie_secure=True, # Note: Will be disabled in debug mode
@@ -110,4 +110,4 @@ with app.app_context():
 
 if (__name__ == "__main__"):
     host = "0.0.0.0" if (not AC.DEBUG_MODE) else None
-    app.run(debug=AC.DEBUG_MODE, host=host, port=int(environ.get("PORT", 8080)))
+    app.run(debug=AC.DEBUG_MODE, host=host, port=int(environ.get("PORT", 8000)))

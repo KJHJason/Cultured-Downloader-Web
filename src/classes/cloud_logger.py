@@ -32,7 +32,7 @@ class CloudLogger:
     def GOOGLE_LOGGING_HANDLER(self) -> CloudLoggingHandler:
         return self.__GOOGLE_LOGGING_HANDLER
 
-    def log(self, content: str | dict, logName: str | None = None) -> None:
+    def log(self, content: str | dict, log_name: str | None = None) -> None:
         """Logs a content with the given log name in GCP Cloud Logging with the severity of "DEFAULT"
 
         The log entry will have no assigned severity level on GCP Cloud Logging.
@@ -40,148 +40,148 @@ class CloudLogger:
         Args:
             content (str|dict): 
                 The content to log
-            logName (str, optional):
+            log_name (str, optional):
                 The name of the log with the given content
 
         Returns:
             None
         """
-        self.__write_log_entry(logName=logName, logMessage=content, severity="DEFAULT")
+        self.__write_log_entry(log_name=log_name, log_message=content, severity="DEFAULT")
 
-    def debug(self, content: str | dict, logName: str | None = None) -> None:
+    def debug(self, content: str | dict, log_name: str | None = None) -> None:
         """Logs a content with the given log name in GCP Cloud Logging with the severity of "DEBUG"
         used for debug or trace information.
 
         Args:
             content (str|dict): 
                 The content to log
-            logName (str, optional):
+            log_name (str, optional):
                 The name of the log with the given content
 
         Returns:
             None
         """
-        self.__write_log_entry(logName=logName, logMessage=content, severity="DEBUG")
+        self.__write_log_entry(log_name=log_name, log_message=content, severity="DEBUG")
 
-    def info(self, content: str | dict, logName: str | None = None) -> None:
+    def info(self, content: str | dict, log_name: str | None = None) -> None:
         """Logs a content with the given log name in GCP Cloud Logging with the severity of "INFO"
         used for routine information, such as ongoing status or performance.
 
         Args:
             content (str|dict): 
                 The content to log
-            logName (str, optional):
+            log_name (str, optional):
                 The name of the log with the given content
 
         Returns:
             None
         """
-        self.__write_log_entry(logName=logName, logMessage=content, severity="INFO")
+        self.__write_log_entry(log_name=log_name, log_message=content, severity="INFO")
 
-    def notice(self, content: str | dict, logName: str | None = None) -> None:
+    def notice(self, content: str | dict, log_name: str | None = None) -> None:
         """Logs a content with the given log name in GCP Cloud Logging with the severity of "NOTICE"
         used for normal but significant events, such as start up, shut down, or a configuration change.
 
         Args:
             content (str|dict): 
                 The content to log
-            logName (str, optional):
+            log_name (str, optional):
                 The name of the log with the given content
 
         Returns:
             None
         """
-        self.__write_log_entry(logName=logName, logMessage=content, severity="NOTICE")
+        self.__write_log_entry(log_name=log_name, log_message=content, severity="NOTICE")
 
-    def warning(self, content: str | dict, logName: str | None = None) -> None:
+    def warning(self, content: str | dict, log_name: str | None = None) -> None:
         """Logs a content with the given log name in GCP Cloud Logging with the severity of "WARNING"
         used for warning events that might cause problems.
 
         Args:
             content (str|dict): 
                 The content to log
-            logName (str, optional):
+            log_name (str, optional):
                 The name of the log with the given content
 
         Returns:
             None
         """
-        self.__write_log_entry(logName=logName, logMessage=content, severity="WARNING")
+        self.__write_log_entry(log_name=log_name, log_message=content, severity="WARNING")
 
-    def error(self, content: str | dict, logName: str | None = None) -> None:
+    def error(self, content: str | dict, log_name: str | None = None) -> None:
         """Logs a content with the given log name in GCP Cloud Logging with the severity of "ERROR"
         used for error events that are likely to cause problems.
 
         Args:
             content (str|dict): 
                 The content to log
-            logName (str, optional):
+            log_name (str, optional):
                 The name of the log with the given content
 
         Returns:
             None
         """
-        self.__write_log_entry(logName=logName, logMessage=content, severity="ERROR")
+        self.__write_log_entry(log_name=log_name, log_message=content, severity="ERROR")
 
-    def critical(self, content: str | dict, logName: str | None = None) -> None:
+    def critical(self, content: str | dict, log_name: str | None = None) -> None:
         """Logs a content with the given log name in GCP Cloud Logging with the severity of "CRITICAL"
         used for critical events that cause more severe problems or outages.
 
         Args:
             content (str|dict): 
                 The content to log
-            logName (str, optional):
+            log_name (str, optional):
                 The name of the log with the given content
 
         Returns:
             None
         """
-        self.__write_log_entry(logName=logName, logMessage=content, severity="CRITICAL")
+        self.__write_log_entry(log_name=log_name, log_message=content, severity="CRITICAL")
 
-    def alert(self, content: str | dict, logName: str | None = None) -> None:
+    def alert(self, content: str | dict, log_name: str | None = None) -> None:
         """Logs a content with the given log name in GCP Cloud Logging with the severity of "ALERT"
         used when a person must take an action immediately.
 
         Args:
             content (str|dict): 
                 The content to log
-            logName (str, optional):
+            log_name (str, optional):
                 The name of the log with the given content
 
         Returns:
             None
         """
-        self.__write_log_entry(logName=logName, logMessage=content, severity="ALERT")
+        self.__write_log_entry(log_name=log_name, log_message=content, severity="ALERT")
 
-    def emergency(self, content: str | dict, logName: str | None = None) -> None:
+    def emergency(self, content: str | dict, log_name: str | None = None) -> None:
         """Logs a content with the given log name in GCP Cloud Logging with the severity of "EMERGENCY"
         used for emergency events that indicate one or more systems are unusable.
 
         Args:
             content (str|dict): 
                 The content to log
-            logName (str, optional):
+            log_name (str, optional):
                 The name of the log with the given content
 
         Returns:
             None
         """
-        self.__write_log_entry(logName=logName, logMessage=content, severity="EMERGENCY")
+        self.__write_log_entry(log_name=log_name, log_message=content, severity="EMERGENCY")
 
-    def __write_log_entry(self, logName: str | None = None, 
-                        logMessage: str | dict = None, severity: str | None = None) -> None:
+    def __write_log_entry(self, log_name: str | None = None, 
+                        log_message: str | dict = None, severity: str | None = None) -> None:
         """Writes an entry to the given log location.
 
         Args:
-            logName (str): The location of the log to write to
+            log_name (str): The location of the log to write to
                 Defaults to "cultured-downloader-api"
-            logMessage (str|dict): The message to write to the log
+            log_message (str|dict): The message to write to the log
                 The message is written to the log with the given severity
                 More details on how to write the log messages:
                     https://cloud.google.com/logging/docs/samples/logging-write-log-entry
             severity (str, optional): The severity of the log entry
-                If severity is defined in the dict type logMessage, you can leave the severity argument out
-                If the logMessage is a str, the severity argument is required
+                If severity is defined in the dict type log_message, you can leave the severity argument out
+                If the log_message is a str, the severity argument is required
                 If severity is not defined, it will be set to "DEFAULT" severity
                 More details on the severity type:
                     https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#LogSeverity
@@ -191,18 +191,18 @@ class CloudLogger:
 
         Raises:
             - ValueError:
-                - If the logName is not defined
-                - If the logMessage is not defined
+                - If the log_name is not defined
+                - If the log_message is not defined
                 - If the severity is not valid
             - TypeError:
                 - If the severity is not a str
-                - If the logMessage is not a str or dict type
+                - If the log_message is not a str or dict type
         """
-        if (logMessage is None):
-            raise ValueError("logMessage must be defined!")
+        if (log_message is None):
+            raise ValueError("log_message must be defined!")
 
-        if (logName is None):
-            logName = self.__LOGGING_NAME
+        if (log_name is None):
+            log_name = self.__LOGGING_NAME
 
         if (severity is None):
             severity = "DEFAULT"
@@ -213,38 +213,38 @@ class CloudLogger:
         else:
             raise TypeError("severity must be a str or a valid severity!")
 
-        stackLevel = 0
-        stackTraceback = []
+        stack_level = 0
+        stack_traceback = []
 
         try:
             while (1):
-                data = getframeinfo(stack()[stackLevel][0])
+                data = getframeinfo(stack()[stack_level][0])
                 if (C.ROOT_DIR_PATH not in pathlib.Path(data.filename).parents):
                     break
 
-                stackTraceback.append({
-                    "stackLevel": stackLevel,
+                stack_traceback.append({
+                    "stack_level": stack_level,
                     "filename": pathlib.Path(data.filename).name,
-                    "lineNo": data.lineno,
+                    "line_no": data.lineno,
                     "function": f"{data.function}()" if (data.function != "<module>") else data.function,
-                    "codeContext": [line.strip() for line in data.code_context],
+                    "code_context": [line.strip() for line in data.code_context],
                     "index": data.index
                 })
-                stackLevel += 1
+                stack_level += 1
         except (IndexError):
-            stackTraceback.append("No stack trace available!")
+            stack_traceback.append("No stack trace available!")
 
-        logger = self.__LOGGING_CLIENT.logger(logName)
-        if (isinstance(logMessage, dict)):
-            if ("severity" not in logMessage):
-                logMessage["severity"] = severity
-            logMessage["stack_traceback"] = stackTraceback
-            logger.log_struct(logMessage)
-        elif (isinstance(logMessage, str)):
-            logMessage = {"message": logMessage, "severity": severity, "stack_traceback": stackTraceback}
-            logger.log_struct(logMessage)
+        logger = self.__LOGGING_CLIENT.logger(log_name)
+        if (isinstance(log_message, dict)):
+            if ("severity" not in log_message):
+                log_message["severity"] = severity
+            log_message["stack_traceback"] = stack_traceback
+            logger.log_struct(log_message)
+        elif (isinstance(log_message, str)):
+            log_message = {"message": log_message, "severity": severity, "stack_traceback": stack_traceback}
+            logger.log_struct(log_message)
         else:
-            raise TypeError("logMessage must be a str or dict")
+            raise TypeError("log message must be a str or dict")
 
 CLOUD_LOGGER = CloudLogger()
 
