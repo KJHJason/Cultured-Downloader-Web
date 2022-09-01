@@ -1,18 +1,16 @@
 # import flask libraries (Third-party libraries)
 from flask import Flask
 from flask_talisman import Talisman
-from flask.sessions import SecureCookieSessionInterface
 
 # import Google Cloud Logging API (third-party library)
 from google.cloud import logging as gcp_logging
 
 # import Python's standard libraries
 from os import environ
-import hashlib
 import logging
 
 # import local python libraries
-from classes import APP_CONSTANTS as AC, SECRET_MANAGER, CLOUD_LOGGER
+from classes import APP_CONSTANTS as AC, CLOUD_LOGGER
 
 """--------------------------- Start of Flask Configuration ---------------------------"""
 
@@ -21,20 +19,6 @@ app.config["APP_CONSTANTS"] = AC
 
 # Maximum file size for uploading anything to the web app's server
 app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024 # 1MiB
-
-# Flask session cryptographic configurations
-app.config["SECRET_KEY"] = SECRET_MANAGER.get_secret_payload(
-    secret_id="flask-secret-key", decode_secret=False
-)
-FLASK_SESSION_COOKIE_INTERFACE = SecureCookieSessionInterface()
-FLASK_SESSION_COOKIE_INTERFACE.salt = SECRET_MANAGER.get_secret_payload(
-    secret_id="flask-session-salt", decode_secret=False
-)
-FLASK_SESSION_COOKIE_INTERFACE.digest_method = staticmethod(hashlib.sha512)
-app.session_interface = FLASK_SESSION_COOKIE_INTERFACE
-
-# Flask session cookie configurations
-app.config["SESSION_PERMANENT"] = False # Session cookie will be deleted when the browser is closed
 
 # Flask limiter config
 with app.app_context():
