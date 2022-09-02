@@ -1,5 +1,4 @@
 # import Python's standard libraries
-import re
 from dataclasses import dataclass, field
 
 @dataclass(frozen=True, repr=False)

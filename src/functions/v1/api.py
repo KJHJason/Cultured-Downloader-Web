@@ -70,6 +70,9 @@ def format_gdrive_json_response(json_response: dict) -> dict:
                 }
                 return error_msg
 
+    # Just in case, pop unnecessary fields from the response.
+    gdrive_json_response.pop("owners", None)
+    gdrive_json_response.pop("permissions", None)
     return gdrive_json_response # return the original gdrive API JSON response
 
 def format_file_json_responses(json_responses: list[dict]) -> list[dict]:
