@@ -11,7 +11,7 @@ import logging
 
 # import local python libraries
 from classes import CONSTANTS, APP_CONSTANTS, CLOUD_LOGGER
-from classes.middleware import add_middleware_to_app, add_app_exception_handlers, add_api_exception_handlers
+from functions import add_middleware_to_app, add_app_exception_handlers, add_api_exception_handlers
 from routers import api_v1, web_app_general
 
 """--------------------------- Start of API Configuration ---------------------------"""
@@ -51,7 +51,7 @@ add_middleware_to_app(api_v1)
 add_app_exception_handlers(app=app)
 add_api_exception_handlers(api=api_v1)
 
-# Integrate Google CLoud Logging to the API
+# Integrate Google CLoud Logging to FastAPI
 gcp_logging.handlers.setup_logging(CLOUD_LOGGER.GOOGLE_LOGGING_HANDLER)
 logging.getLogger().setLevel(logging.INFO)
 

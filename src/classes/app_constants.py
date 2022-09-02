@@ -8,26 +8,19 @@ class AppConstants:
     # API constants
     DEBUG_MODE: bool = True # TODO: Change this to False when deploying to production
     FAVICON_URL: str = "/favicon.ico"
-    API_RESPONSES: dict = field(
-        default_factory=lambda: {
-            429: {
-                "error_code": 429, 
-                "message": "Too many requests"
-            }
-        }
-    )
 
     # For API documentations
     # https://fastapi.tiangolo.com/advanced/extending-openapi/
     LATEST_VER: str = "v1"
     VER_ONE: str = "v1"
-    DOCS_URL: str = "/docs"
+    if (DEBUG_MODE):
+        DOCS_URL: str = "/docs"
     REDOC_URL: str = "/redoc"
     OPENAPI_JSON_URL: str = "/openapi.json"
     VER_ONE_OPENAPI_JSON_URL: str = f"/api/{VER_ONE}{OPENAPI_JSON_URL}"
 
     # For the API's session middleware
-    ISSUER: str = "https://api.cultureddownloader.com/"
+    ISSUER: str = "https://cultureddownloader.com/"
 
     # For encrypting/decrypting the saved user's cookie data
     RSA_SHA256_KEY_ID: str = "user-data-rsa-key-1"
@@ -45,9 +38,6 @@ class AppConstants:
                 "https://api.cultureddownloader.com/drive/query"
         }
     )
-
-    # For caching
-    BLUEPRINT_ENDPOINT_REGEX: re.Pattern[str] = re.compile(r"^[\w]+(.)[\w]+$")
 
 APP_CONSTANTS = AppConstants()
 

@@ -29,8 +29,7 @@ Check out the main software at <a href='https://github.com/KJHJason/Cultured-Dow
     docs_url=None,
     redoc_url=None,
     openapi_url=APP_CONSTANTS.OPENAPI_JSON_URL,
-    swagger_ui_oauth2_redirect_url=None,
-    responses=APP_CONSTANTS.API_RESPONSES
+    swagger_ui_oauth2_redirect_url=None
 )
 
 @api.get(

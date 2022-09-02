@@ -21,7 +21,11 @@ async def index(request: Request):
     server_time = {"server_time": format_server_time()}
     return templates.TemplateResponse(
         name="wip_page.html", 
-        context={"request": request, "csp_nonce": generate_nonce(), "context": server_time}
+        context={
+            "request": request, 
+            "csp_nonce": generate_nonce(), 
+            "context": server_time
+        }
     )
 
 @web_app_general.get("/favicon.ico")
