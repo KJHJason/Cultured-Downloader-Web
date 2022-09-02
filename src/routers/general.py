@@ -20,7 +20,7 @@ templates = get_jinja2_template_handler()
 async def index(request: Request):
     server_time = {"server_time": format_server_time()}
     return templates.TemplateResponse(
-        name="general/home.html", 
+        name="wip_page.html", 
         context={"request": request, "csp_nonce": generate_nonce(), "context": server_time}
     )
 
@@ -56,7 +56,7 @@ if (APP_CONSTANTS.DEBUG_MODE):
     )
     async def latest_docs():
         generate_nonce()
-        return RedirectResponse(url=f"/{APP_CONSTANTS.LATEST_VER}{APP_CONSTANTS.DOCS_URL}")
+        return RedirectResponse(url=f"/api/{APP_CONSTANTS.LATEST_VER}{APP_CONSTANTS.DOCS_URL}")
 
 @web_app_general.get(
     path="/api",
@@ -68,7 +68,7 @@ if (APP_CONSTANTS.DEBUG_MODE):
 )
 async def latest_redocs():
     generate_nonce()
-    return RedirectResponse(url=f"/{APP_CONSTANTS.LATEST_VER}{APP_CONSTANTS.REDOC_URL}")
+    return RedirectResponse(url=f"/api/{APP_CONSTANTS.LATEST_VER}{APP_CONSTANTS.REDOC_URL}")
 
 @web_app_general.get(
     path="/latest/openapi.json",
@@ -76,4 +76,4 @@ async def latest_redocs():
 )
 async def latest_openapi_json():
     generate_nonce()
-    return RedirectResponse(url=f"/{APP_CONSTANTS.LATEST_VER}{APP_CONSTANTS.OPENAPI_JSON_URL}")
+    return RedirectResponse(url=f"/api/{APP_CONSTANTS.LATEST_VER}{APP_CONSTANTS.OPENAPI_JSON_URL}")

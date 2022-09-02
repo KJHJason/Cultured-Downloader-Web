@@ -16,10 +16,15 @@ from classes.exceptions import CRC32ChecksumError, DecryptionError, APIException
 
 # import Python's standard libraries
 import asyncio
+from typing import Any
 
 api = FastAPI(
     debug=APP_CONSTANTS.DEBUG_MODE,
     title="Cultured Downloader API",
+    description="""An API by <a href='https://github.com/KJHJason'>KJHJason</a> to help users 
+with downloading content from Pixiv Fanbox and Fantia.\n
+Note that the user must be logged in to the services mentioned in order to download the paid content.\n
+Check out the main software at <a href='https://github.com/KJHJason/Cultured-Downloader'>GitHub</a>.""",
     version=APP_CONSTANTS.VER_ONE,
     docs_url=None,
     redoc_url=None,
@@ -80,6 +85,7 @@ async def redoc_html(response: Response):
     path="/drive/query",
     description="Query Google Drive API to get the file details or all the files in a folder. Note that files or folders that has a resource key will not work and will return an empty JSON response.",
     response_class=PrettyJSONResponse,
+    response_model=Any,
     include_in_schema=True
 )
 async def google_drive_query(request: Request, data_payload: GDriveJsonRequest):
@@ -115,8 +121,8 @@ async def google_drive_query(request: Request, data_payload: GDriveJsonRequest):
 
 @api.post(
     path="/public-key",
-    description="Get the public key for secure communication when transmitting the user's data on top of HTTPS",
-    summary="Available algorithm: RSA4096-OAEP-SHA512, RSA4096-OAEP-SHA256",
+    description="Get the public key for secure communication when transmitting the user's data on top of HTTPS."
+                "\n\nAvailable algorithm: RSA4096-OAEP-SHA512, RSA4096-OAEP-SHA256",
     response_model=PublicKeyResponse,
     response_class=PrettyJSONResponse,
     include_in_schema=True

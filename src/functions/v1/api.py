@@ -122,6 +122,7 @@ def format_directory_json_responses(directory_json_responses: list[dict]) -> lis
         list[dict]:
             The formatted JSON responses of directories.
     """
+    print(directory_json_responses)
     return [
         format_directory_json_response(directory_json_response) 
         for directory_json_response in directory_json_responses
