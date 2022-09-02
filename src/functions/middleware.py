@@ -19,7 +19,7 @@ from classes.cloud_logger import CLOUD_LOGGER
 from classes.app_constants import APP_CONSTANTS as AC
 from classes.exceptions import APIException
 from classes.responses import PrettyJSONResponse
-from functions import get_jinja2_template_handler
+from functions import render_template
 from classes.middleware.csp_middleware import ContentSecurityPolicy
 from classes.middleware.jwt_middleware import AuthlibJWTMiddleware, API_HMAC
 from classes.middleware.cache_control_middleware import CacheControlMiddleware, CacheControlURLRule
@@ -129,8 +129,6 @@ def add_api_exception_handlers(api: ASGIApp) -> None:
 
 def add_app_exception_handlers(app: ASGIApp) -> None:
     """Adds custom exception handlers to the web application"""
-    templates = get_jinja2_template_handler()
-
     @app.exception_handler(HTTPException)
     @app.exception_handler(StarletteHTTPException)
     async def custom_error_handler(request: Request, exc: HTTPException | StarletteHTTPException) -> HTMLResponse:
@@ -152,7 +150,7 @@ def add_app_exception_handlers(app: ASGIApp) -> None:
             title = "I'm a teapot!"
             description = "I'm a teapot"
 
-        return templates.TemplateResponse(
+        return render_template(
             name="error.html", 
             context={
                 "request": request,

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
 
 # import local python libraries
-from functions import format_server_time, get_jinja2_template_handler
+from functions import format_server_time, get_jinja2_template_handler, render_template
 from classes import CONSTANTS, APP_CONSTANTS
 from classes.responses import PrettyJSONResponse
 from classes.middleware import generate_nonce
@@ -11,7 +11,7 @@ from classes.middleware import generate_nonce
 web_app_general = APIRouter(
     include_in_schema=False
 )
-templates = get_jinja2_template_handler()
+templates_handler = get_jinja2_template_handler()
 
 @web_app_general.get(
     path="/",
@@ -27,12 +27,14 @@ async def index(request: Request):
 
     if (not APP_CONSTANTS.DEBUG_MODE):
         # Remove the code below once the frontend is ready
-        return templates.TemplateResponse(
+        return render_template(
+            templates_handler,
             name="wip_page.html", 
             context=context
         )
     else:
-        return templates.TemplateResponse(
+        return render_template(
+            templates_handler,
             name="general/index.html",
             context=context
         )
@@ -50,7 +52,8 @@ async def favicon():
 )
 async def teapot(request: Request):
     generate_nonce()
-    return templates.TemplateResponse(
+    return render_template(
+        templates_handler,
         name="error.html", 
         context={
             "request": request, 
