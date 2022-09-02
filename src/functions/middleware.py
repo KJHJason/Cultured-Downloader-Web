@@ -64,18 +64,14 @@ def add_middleware_to_app(app: ASGIApp):
             csp_options={
                 "style-src": [
                     "'self'",
-                    "https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css",
-                    "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui.css",
-                    "https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700"
+                    "https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css"
                 ],
                 "frame-src":[
                     "'self'"
                 ],
                 "script-src":[
                     "'self'",
-                    "https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js",
-                    "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui-bundle.js",
-                    "https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"
+                    "https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"
                 ],
             }
         )
