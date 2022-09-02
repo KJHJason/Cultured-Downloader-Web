@@ -30,6 +30,14 @@ def format_gdrive_json_response(json_response: dict) -> dict:
                 gdrive_json_response.pop("owners", None)
                 gdrive_json_response.pop("permissions", None)
                 return {mimetype: gdrive_json_response}
+        else:
+            return {
+                "file_id": json_response["file_id"],
+                "error": {
+                    "code": 404,
+                    "message": f"{mimetype} not found"
+                }
+            }
 
     # check if it's because of invalid credentials in the header or
     # there was a problem with the request such as 404 not found.
