@@ -13,7 +13,7 @@ COPY requirements.txt .
 
 # Install the dependencies using the copied python script with integrity checks
 RUN pip install -r requirements.txt
-RUN pip install -U gunicorn
+RUN pip install -U hypercorn
 
 # Remove the python script and the requirements file
 # after the dependencies are installed
@@ -27,9 +27,7 @@ WORKDIR $APP_HOME
 # Set PORT env for flask app to Listen on port 8080
 ENV PORT 8080
 
-# Run the web service on container startup. Here we use the gunicorn webserver.
-# For environments with multiple CPU cores, increase the number of workers
-# to be equal to the cores available.
+# Run the web service on container startup using hypercorn
 # Timeout is set to 0 to disable the timeouts of the workers to allow Cloud Run to handle instance scaling
 # <filename>:<flask app variable name> which in this case is app:app
-CMD exec gunicorn --bind :$PORT --workers 2 --threads 4 --timeout 0 app:app
+CMD exec hypercorn --bind :$PORT --keep-alive 0 -w 4 app:app

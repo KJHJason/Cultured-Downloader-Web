@@ -1,9 +1,9 @@
 # import Python's standard libraries
 import pathlib
 from dataclasses import dataclass
-from six import ensure_binary
 
 # import third-party libraries
+from six import ensure_binary
 from google_crc32c import Checksum as g_crc32c
 
 def crc32c(data: bytes | str) -> int:
@@ -27,10 +27,21 @@ class Constants:
     # For the web application
     ROOT_DIR_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent.absolute()
     CONFIG_DIR_PATH: pathlib.Path = ROOT_DIR_PATH.joinpath("config_files")
+    ICON_PATH: pathlib.Path = ROOT_DIR_PATH.joinpath("static", "images", "icons", "favicon.ico")
 
     # For GCP-related constants
     GOOGLE_PROJECT_NAME: str = "cultureddownloader"
     GOOGLE_PROJECT_LOCATION: str = "asia-southeast1"
+
+    # For Google API that requires Google OAuth2 authentication
+    OAUTH_CLIENT_SECRET_NAME: str = "google-oauth-client"
+    OAUTH_TOKEN_SECRET_NAME: str = "google-oauth-token"
+
+    # For Google API scopes:
+    # Google Drive API Scopes details: 
+    #   https://developers.google.com/identity/protocols/oauth2/scopes#drive
+    # WARNING: Editing the scopes below will require the token to be re-generated
+    GOOGLE_OAUTH_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
 CONSTANTS = Constants()
 

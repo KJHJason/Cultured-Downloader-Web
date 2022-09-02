@@ -1,2 +1,0 @@
-gcloud builds submit --tag gcr.io/cultureddownloader/cultured-downloader
-gcloud beta run deploy cultured-downloader --image=gcr.io/cultureddownloader/cultured-downloader:latest --region=asia-southeast1 --project=cultureddownloader

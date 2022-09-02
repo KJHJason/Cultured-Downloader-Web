@@ -1,0 +1,20 @@
+# Ignore all pycache files
+*.pyc
+
+# Ignore all markdown files
+*.md
+
+# Ignore test codes and folders
+test/**
+*test*.*
+*Test*.*
+*test*.*/**
+*Test*.*/**
+
+# Ignore git folders and files.
+.git
+.gitignore
+
+# Ignore other folders and files.
+.dccache
+helper

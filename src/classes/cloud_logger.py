@@ -17,7 +17,7 @@ class CloudLogger:
         self.__LOGGING_CLIENT = gcp_logging.Client.from_service_account_json(
             json_credentials_path=C.CONFIG_DIR_PATH.joinpath("google-logging.json")
         )
-        self.__LOGGING_NAME = "cultured-downloader-web-app"
+        self.__LOGGING_NAME = "cultured-downloader-api"
         self.__GOOGLE_LOGGING_HANDLER = CloudLoggingHandler(self.__LOGGING_CLIENT, name=self.__LOGGING_NAME)
         self.__LOGGING_SEVERITY_TUPLE = ("DEFAULT", "DEBUG", "INFO", "NOTICE", "WARNING",
                                         "ERROR", "CRITICAL", "ALERT", "EMERGENCY")

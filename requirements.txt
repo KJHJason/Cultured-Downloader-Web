@@ -1,20 +1,28 @@
 # For Python
 setuptools>=60.1.0
 
-# For Flask Web Application
-Flask>=2.0.3
-Jinja2>=3.0.3
+# IMPORTANT WHEN IN DEV MODE:
+# uvicorn[standard]>=0.18.3
 
-# For extra security for
-# the Flask web app
-Flask_Limiter>=2.0.4
-flask-talisman>=1.0.0
+# For FastAPI Application
+fastapi>=0.81.0
+
+# Other useful dependencies
+# used in the FastAPI web app
+Jinja2>=3.1.2
+httpx[http2]>=0.23.0
+Authlib>=1.0.1
+Secweb>=1.5.1
+
+# For integrity checks
+google-crc32c>=1.3.0
 
 # For Google Cloud Platform APIs
 google-api-python-client>=2.51.0
 
-# For integrity checks
-google-crc32c>=1.3.0
+# For Google Cloud Platform KMS
+cryptography>=37.0.2
+google-cloud-kms>=2.11.2
 
 # Other Google Cloud Platform APIs
 # used in the Flask web app
