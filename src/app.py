@@ -22,7 +22,7 @@ routes = [
         app=StaticFiles(
             directory=str(CONSTANTS.ROOT_DIR_PATH.joinpath("static"))
         ), 
-        name="static_files"
+        name="static"
     ),
     # For adding several APIs on top of the main API...
     # https://fastapi.tiangolo.com/advanced/sub-applications/

@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/images/icons/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/images/icons/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/images/icons/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='images/icons/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='images/icons/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', path='images/icons/favicon-16x16.png') }}">
     <title>Work In Progress</title>
 </head>
 <body>
     <h1>Cultured Downloader</h1>
     <h3>(Frontend by <a href="https://github.com/MikuChanUwU">Royston Loo</a> is in progress)</h3>
     {{ context.server_time }}
-    <p>Go to <a href="/api">API documentations</a></p>
+    <p>Go to <a href="{{ url_for('latest_redocs') }}">API documentations</a></p>
     <p>Note: Remember to clear your browser's cache as the frontend should be done soon!</p>
     {% include 'includes/_footer.html' %}
 </body>
