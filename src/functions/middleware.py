@@ -82,7 +82,7 @@ def add_middleware_to_app(app: ASGIApp):
 
     # Add cache headers to the specified routes
     # when the app is not in debug mode
-    if (AC.DEBUG_MODE):
+    if (not AC.DEBUG_MODE):
         ONE_YEAR_CACHE = "public, max-age=31536000"
         ONE_DAY_CACHE = "public, max-age=86400"
         app.add_middleware(

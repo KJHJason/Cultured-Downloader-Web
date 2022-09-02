@@ -7,13 +7,12 @@ FROM python:3.10.6-slim
 # Allow statements and log messages to immediately appear in the Knative logs
 ENV PYTHONUNBUFFERED True
 
-# Copy the dependency requirements and the python script
-# to download the dependencies to the working directory
+# Copy the dependency requirements to download 
+# the dependencies to the working directory
 COPY requirements.txt .
 
-# Install the dependencies using the copied python script with integrity checks
+# Install the dependencies
 RUN pip install -r requirements.txt
-RUN pip install -U hypercorn
 
 # Remove the python script and the requirements file
 # after the dependencies are installed

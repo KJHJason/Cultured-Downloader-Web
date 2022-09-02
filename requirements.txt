@@ -1,11 +1,12 @@
 # For Python
 setuptools>=60.1.0
 
-# IMPORTANT WHEN IN DEV MODE:
-# uvicorn[standard]>=0.18.3
-
 # For FastAPI Application
 fastapi>=0.81.0
+
+# IMPORTANT WHEN IN DEV MODE:
+# uvicorn[standard]>=0.18.3
+hypercorn>=0.14.1
 
 # Other useful dependencies
 # used in the FastAPI web app
