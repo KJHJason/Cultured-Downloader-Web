@@ -19,14 +19,23 @@ templates = get_jinja2_template_handler()
 )
 async def index(request: Request):
     server_time = {"server_time": format_server_time()}
-    return templates.TemplateResponse(
-        name="wip_page.html", 
-        context={
-            "request": request, 
-            "csp_nonce": generate_nonce(), 
-            "context": server_time
-        }
-    )
+    context = {
+        "request": request, 
+        "csp_nonce": generate_nonce(), 
+        "context": server_time
+    }
+
+    if (not APP_CONSTANTS.DEBUG_MODE):
+        # Remove the code below once the frontend is ready
+        return templates.TemplateResponse(
+            name="wip_page.html", 
+            context=context
+        )
+    else:
+        return templates.TemplateResponse(
+            name="general/index.html",
+            context=context
+        )
 
 @web_app_general.get("/favicon.ico")
 async def favicon():
