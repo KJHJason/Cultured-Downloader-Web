@@ -57,7 +57,7 @@ class JWT_HMAC:
                     More info:
                         https://docs.authlib.org/en/latest/jose/jwt.html#jwt-payload-claims-validation
         """
-        if (not isinstance(claim_options, dict)):
+        if (not isinstance(claim_options, dict | None)):
             raise TypeError(f"Invalid claim_options type: {type(claim_options)}")
 
         self.__CLAIM_OPTIONS = claim_options
@@ -95,7 +95,10 @@ class JWT_HMAC:
             decode_secret=False
         )
 
-    def __get_jwt_claims(self, expiry_date: datetime | None = None) -> dict[str, str | int]:
+    def __get_jwt_claims(
+        self, 
+        expiry_date: datetime | None = None,
+        omit_claims: bool | None = False) -> dict[str, str | int]:
         """Get JWT claims for validations later if required.
 
         Refer to RFC7519 standards:
@@ -104,38 +107,51 @@ class JWT_HMAC:
         Args:
             expiry_date (datetime, optional):
                 Expiry date of the JWT token. Defaults to None.
+            omit_claims (bool, optional):
+                Whether to omit the iss and iat claims from the JWT token. Defaults to False.
 
         Returns:
             dict[str, str | int]:
                 JWT claims.
         """
-        jwt_claims = {
-            "iss": APP_CONSTANTS.ISSUER,
-            "iat": time.time(),
-        }
+        jwt_claims = {}
+        if (not omit_claims):
+            jwt_claims = {
+                "iss": APP_CONSTANTS.ISSUER,
+                "iat": time.time(),
+            }
 
         if (expiry_date is not None):
-            jwt_claims["exp"] = expiry_date.replace(tzinfo=ZoneInfo("UTC"))
+            if (isinstance(expiry_date, datetime)):
+                jwt_claims["exp"] = expiry_date.replace(tzinfo=ZoneInfo("UTC"))
+            elif (isinstance(expiry_date, float)):
+                jwt_claims["exp"] = int(expiry_date)
 
         return jwt_claims
 
-    def sign(self, payload: dict, expiry_date: datetime | None = None) -> bytes:
+    def sign(
+        self, 
+        payload: dict, 
+        expiry_date: datetime | int | float | None = None,
+        omit_claims: bool | None = False) -> bytes:
         """Sign the JWT token.
 
         Args:
             payload (dict):
                 Payload of the JWT token.
-            expiry_date (datetime, optional):
+            expiry_date (datetime|int|float, optional):
                 Expiry date of the JWT token. Defaults to None.
+            omit_claims (bool, optional):
+                Whether to omit the iss and iat claims from the JWT token. Defaults to False.
 
         Returns:
             bytes:
                 Signed JWT token.
         """
-        if (expiry_date is not None and not isinstance(expiry_date, datetime)):
-            raise TypeError(f"expiry_date must be a datetime object!")
+        if (expiry_date is not None and not isinstance(expiry_date, datetime | int | float)):
+            raise TypeError(f"expiry_date must be a datetime object, a float, or an integer!")
 
-        payload.update(self.__get_jwt_claims(expiry_date))
+        payload.update(self.__get_jwt_claims(expiry_date, omit_claims))
         return self.__JWS.encode(
             header=self.__ALGO_HEADER,
             payload=payload,
@@ -183,6 +199,11 @@ API_HMAC = JWT_HMAC(
             "value": APP_CONSTANTS.ISSUER
         }
     }
+)
+
+CSRF_HMAC = JWT_HMAC(
+    secret_key_id="api-hmac-secret-key",
+    digest_method="sha256"
 )
 
 class AuthlibJWTMiddleware:

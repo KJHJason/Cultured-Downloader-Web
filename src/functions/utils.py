@@ -5,10 +5,14 @@ from fastapi.templating import Jinja2Templates
 
 # import python standard libraries
 import time
-from typing import Any
+import hashlib
+import secrets
+from typing import Any, Literal
 
 # import local python libraries
+from classes.exceptions import APIException
 from classes import CONSTANTS as C
+from classes.middleware import CSRF_HMAC
 
 def format_server_time() -> str:
     """Demo function to format the server time."""
@@ -39,6 +43,78 @@ def get_user_ip(request: Request) -> str:
 
     return "127.0.0.1"
 
+def validate_csrf_token(request: Request, request_token: str | None = None) -> Literal[True]:
+    """Validates the CSRF token.
+
+    Args:
+        request (Request):
+            The request object
+
+    Simple usage example:
+    >>> @router.post("/login")
+    >>> async def login(request: Request):
+    >>>     validate_csrf_token(request)
+    >>>     # Do login stuff here
+
+    Usage example with a form submission:
+    >>> from fastapi import Form
+    >>> from pydantic import BaseModel
+    >>> 
+    >>> class LoginForm(BaseModel):
+    >>>     username: str
+    >>>     password: str
+    >>>     csrf_token: str
+    >>> 
+    >>>     @classmethod
+    >>>     def as_form(cls, username, password, csrf_token) -> AnyForm:
+    >>>         return cls(username=username, password=password, csrf_token=csrf_token)
+    >>> 
+    >>> @router.post("/login")
+    >>> async def login(form_data: LoginForm = Depends(LoginForm.as_form)):
+    >>>     validate_csrf_token(request, form_data.csrf_token)
+    >>>     # Do login stuff here
+
+    Returns:
+        True regardless of whether the token is valid as an 
+        APIException will be raised if the token is invalid.
+
+    Raises:
+        APIException:
+            If the CSRF token is invalid
+    """
+    csrf_token = request.session.get("csrf_token", None)
+    if (csrf_token is None):
+        raise APIException(
+            error="CSRF token was not present in the session cookie."
+        )
+
+    signed_token = request_token or request.headers.get("X-CSRF-Token", None)
+    if (signed_token is None):
+        raise APIException(
+            error="CSRF token was not present in the request."
+        )
+
+    token = CSRF_HMAC.get(
+        token=signed_token
+    )
+    if (token != csrf_token):
+        raise APIException(error="CSRF token was invalid.")
+
+    return True
+
+def generate_csrf_token(request: Request) -> str:
+    """Generate a CSRF token."""
+    token = hashlib.sha1(secrets.token_bytes(64)).hexdigest() # Uses sha1 to hash the raw token 
+                                                              # since only the HMAC-SHA256 and HMAC-SHA512 
+                                                              # is exposed to the user
+    request.session["csrf_token"] = token
+    signed_token = CSRF_HMAC.sign(
+        payload={"csrf_token": token},
+        expiry_date=time.time() + 3600, # 1 hour
+        omit_claims=True
+    )
+    return signed_token
+
 def get_jinja2_template_handler() -> Jinja2Templates:
     """Returns the Jinja2Templates handler object.
 
@@ -51,9 +127,8 @@ def get_jinja2_template_handler() -> Jinja2Templates:
         trim_blocks=True,
         lstrip_blocks=True
     )
-    templates.env.globals.update(
-        get_user_ip=get_user_ip
-    )
+    templates.env.globals["user_ip"] = get_user_ip
+    templates.env.globals["csrf_token"] = generate_csrf_token
     return templates
 
 def render_template(templates_handler: Jinja2Templates | None = None, *args: Any, **kwargs: Any) -> HTMLResponse:

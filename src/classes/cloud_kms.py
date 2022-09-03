@@ -13,7 +13,6 @@ import base64
 import secrets
 import warnings
 from typing import Callable, Any
-from binascii import Error as BinasciiError
 
 # import local python libraries
 if (__package__ is None or __package__ == ""):
@@ -22,14 +21,12 @@ if (__package__ is None or __package__ == ""):
     from initialise import crc32c, CONSTANTS as C
     from secret_manager import SECRET_MANAGER
     from cloud_logger import CLOUD_LOGGER
-    from app_constants import AppConstants as AC
 else:
     from .exceptions import CRC32ChecksumError, DecryptionError
     from .utils import rsa_encrypt
     from .initialise import crc32c, CONSTANTS as C
     from .secret_manager import SECRET_MANAGER
     from .cloud_logger import CLOUD_LOGGER
-    from .app_constants import AppConstants as AC
 
 class GCP_KMS:
     """Creates an authenticated Cloud KMS client that can be used for cryptographic operations."""
@@ -55,9 +52,9 @@ class GCP_KMS:
         raise DecryptionError("Asymmetric Decryption failed.")
 
     def get_random_bytes(self, 
-            n_bytes: int, 
-            generate_from_hsm: bool | None = False, 
-            return_hex: bool | None = False) -> bytes | str:
+        n_bytes: int, 
+        generate_from_hsm: bool | None = False, 
+        return_hex: bool | None = False) -> bytes | str:
         """Generate a random byte/hex string of length n_bytes that is cryptographically secure.
 
         Args:
@@ -204,10 +201,10 @@ class GCP_AESGCM(GCP_KMS):
         return response.ciphertext
 
     def symmetric_decrypt(self, 
-            ciphertext: bytes, 
-            key_id: str, 
-            key_ring_id: str | None = None, 
-            decode: bool | None = False) -> str | bytes:
+        ciphertext: bytes, 
+        key_id: str, 
+        key_ring_id: str | None = None, 
+        decode: bool | None = False) -> str | bytes:
         """Using AES-256-GCM to decrypt the provided ciphertext via GCP KMS.
 
         Args:
@@ -331,10 +328,10 @@ class GCP_RSA(GCP_Asymmetric):
         super().__init__()
 
     def asymmetric_encrypt(self, 
-            plaintext: str | bytes, 
-            key_id: str, version: int,  
-            key_ring_id: str | None = None, 
-            digest_method: Callable | str | None = hashes.SHA512) -> bytes:
+        plaintext: str | bytes, 
+        key_id: str, version: int,  
+        key_ring_id: str | None = None, 
+        digest_method: Callable | str | None = hashes.SHA512) -> bytes:
         """Encrypts the plaintext using RSA-OAEP-SHA via GCP KMS API.
 
         Args:
@@ -367,11 +364,11 @@ class GCP_RSA(GCP_Asymmetric):
         return rsa_encrypt(plaintext=plaintext, public_key=public_key, digest_method=digest_method)
 
     def asymmetric_decrypt(self, 
-            ciphertext: bytes, 
-            key_id: str | None = None,
-            key_ring_id: str | None = None, 
-            version: int | None = None, 
-            decode: bool | None = False) -> bytes | str:
+        ciphertext: bytes, 
+        key_id: str | None = None,
+        key_ring_id: str | None = None, 
+        version: int | None = None, 
+        decode: bool | None = False) -> bytes | str:
         """Encrypts the plaintext using RSA-OAEP-SHA via GCP KMS API.
 
         Args:
@@ -425,188 +422,7 @@ class GCP_RSA(GCP_Asymmetric):
 
         return response.plaintext if (not decode) else response.plaintext.decode("utf-8")
 
-class UserData(GCP_RSA, GCP_AESGCM):
-    """Creates an authenticated GCP KMS client that uses RSA-OAEP-SHA and 
-    AES-256-GCM for cryptographic operations with the user's data.
-    """
-    def __init__(self) -> None:
-        """Constructor for UserData
-        """
-        self.__AES_KEY = AC.COOKIE_ENCRYPTION_KEY
-        super().__init__()
-
-    def get_rsa_key_info(self, digest_method: str) -> tuple[str, int]:
-        """Get the key ID and key version of the RSA key depending on the digest method
-
-        Args:
-            digest_method (str):
-                The digest method to use for the encryption.
-                supported digest methods are: "sha256" and "sha512"
-
-        Returns:
-            The key ID and key version of the RSA key as a tuple
-        ."""
-        if (digest_method == "sha256"):
-            key = AC.RSA_SHA256_KEY_ID
-            secret_id = AC.RSA_SHA256_VERSION_SECRET_ID
-        else:
-            key = AC.RSA_SHA512_KEY_ID
-            secret_id = AC.RSA_SHA512_VERSION_SECRET_ID
-
-        return key, secret_id
-
-    def get_key_info(self, digest_method: str, get_public_key: bool | None = False) -> dict:
-        """Get the key ID and key version of the key depending on the digest method
-
-        Args:
-            digest_method (str):
-                The digest method to use for the encryption.
-                supported digest methods are: "sha256" and "sha512"
-            get_public_key (bool):
-                If True, the public key is also returned (Defaults to False)
-                Defaults to False.
-
-        Returns:
-            The key ID and key version of the key as a dict.
-            Example returned dictionary: {
-                "key_id": str,
-                "secret_id": int,
-                "latest_version": int,
-                "public_key": str | None
-            }
-        """
-        key, secret_id = self.get_rsa_key_info(digest_method)
-        latest_ver = self.get_latest_ver(key_secret_id=secret_id)
-        key_info = {
-            "key_id": key,
-            "secret_id": secret_id,
-            "latest_version": latest_ver
-        }
-
-        if (get_public_key):
-            key_info["public_key"] = self.get_public_key(key_id=key, version=latest_ver)
-            return key_info
-
-        return key_info
-
-    def get_api_rsa_public_key(self, digest_method: str) -> str:
-        """Gets the RSA public key of the Cultured Downloader API.
-
-        Args:
-            digest_method (str):
-                The digest method to use for the encryption
-
-        Returns:
-            The RSA public key of the Cultured Downloader API depending on the digest method
-        """
-        return self.get_key_info(digest_method=digest_method, get_public_key=True)["public_key"]
-
-    def encrypt_user_data(self, 
-            user_data: str | dict | bytes, 
-            user_public_key: str, 
-            digest_method: str | None = None) -> str:
-        """Encrypts the user's data using AES-256-GCM via GCP KMS API.
-
-        Args:
-            user_data (str, dict, bytes):
-                The user_data to encrypt
-            user_public_key (str):
-                The public key of the user
-            digest_method (str):
-                The digest method to use (Defaults to SHA512) for
-                RSA-OAEP-SHA encryption which must be part of the cryptography module.
-
-        Returns:
-            The base64 encoded ciphertext in string format (utf-8 decoded).
-
-        Raises:
-            ValueError:
-                If the key_id is not provided
-            CRC32ChecksumError:
-                If the integrity checks failed
-        """
-        if (isinstance(user_data, str)):
-            user_data = user_data.encode("utf-8")
-        elif (isinstance(user_data, dict)):
-            user_data = json.dumps(user_data).encode("utf-8")
-
-        encrypted_user_data = rsa_encrypt(
-            plaintext=self.symmetric_encrypt(
-                plaintext=user_data,
-                key_id=self.__AES_KEY
-            ),
-            public_key=user_public_key,
-            digest_method=digest_method
-        )
-        return base64.b64encode(encrypted_user_data).decode("utf-8")
-
-    def decrypt_user_data(self, 
-            encrypted_user_data: bytes, 
-            user_public_key: str, 
-            digest_method: str | None = None) -> str:
-        """Decrypts the user's data using AES-256-GCM via GCP KMS API.
-
-        Args:
-            encrypted_user_data (bytes):
-                The encrypted cookie data to decrypt
-            user_public_key (str):
-                The public key of the user
-            digest_method (str):
-                The digest method to use (Defaults to SHA512) for
-                RSA-OAEP-SHA encryption which must be part of the cryptography module.
-
-        Returns:
-            The base64 encoded ciphertext in string format (utf-8 decoded)
-
-        Raises:
-            ValueError:
-                If the key_id is not provided
-            CRC32ChecksumError:
-                If the integrity checks failed
-        """
-        user_data = rsa_encrypt(
-            plaintext=self.symmetric_decrypt(
-                ciphertext=encrypted_user_data,
-                key_id=self.__AES_KEY
-            ),
-            public_key=user_public_key,
-            digest_method=digest_method
-        )
-        return base64.b64encode(user_data).decode("utf-8")
-
-    def decrypt_user_payload(self, encrypted_data: bytes, digest_method: str) -> dict[str, bytes]:
-        """Decrypts the cookie payload that was sent to the API using the API's private key.
-
-        Args:
-            encrypted_data (bytes): 
-                The cookie data to decrypt.
-            digest_method (str):
-                The digest method to use (Defaults to SHA512) for RSA-OAEP-SHA encryption.
-
-        Returns:
-            The decrypted cookie data (dict).
-        """
-        try:
-            encrypted_data = base64.b64decode(encrypted_data)
-        except (BinasciiError, ValueError, TypeError):
-            return {"error": "Failed to base64 decode user's data ciphertext."}
-
-        key_info = self.get_key_info(digest_method=digest_method)
-        try:
-            decrypted_data = self.asymmetric_decrypt(
-                ciphertext=encrypted_data,
-                key_id=key_info["key_id"],
-                version=key_info["latest_version"]
-            )
-        except (DecryptionError):
-            return {"error": "Failed to decrypt user's data ciphertext."}
-
-        return {"payload": decrypted_data}
-
-USER_DATA = UserData()
-
 __all__ = [
     "GCP_RSA",
-    "GCP_AESGCM",
-    "USER_DATA"
+    "GCP_AESGCM"
 ]

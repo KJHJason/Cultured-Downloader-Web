@@ -20,7 +20,7 @@ def exempt_csp(response: Response) -> None:
     response.headers["X-Exempt-CSP"] = "1"
 
 nonce = None
-def generate_nonce(n_bytes: int=32) -> str:
+def generate_nonce(n_bytes: int | None = 32) -> str:
     """Generate a random nonce string for inline scripts or styles.
 
     Args:

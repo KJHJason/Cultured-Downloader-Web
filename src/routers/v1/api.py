@@ -7,12 +7,10 @@ from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from functions import get_user_ip
 from functions.v1 import format_gdrive_json_response, format_file_json_responses, \
                          format_directory_json_response, format_directory_json_responses
-from classes import USER_DATA, GoogleDrive, APP_CONSTANTS, CLOUD_LOGGER
+from classes import GoogleDrive, APP_CONSTANTS, CLOUD_LOGGER
 from classes.responses import PrettyJSONResponse
 from classes.middleware import generate_nonce, exempt_csp
-from classes.v1 import  UserDataJsonRequest, UserDataJsonResponse, \
-                        GDriveJsonRequest, PublicKeyResponse, PublicKeyRequest
-from classes.exceptions import CRC32ChecksumError, DecryptionError, APIException
+from classes.v1 import GDriveJsonRequest
 
 # import Python's standard libraries
 import asyncio
@@ -21,9 +19,10 @@ from typing import Any
 api = FastAPI(
     debug=APP_CONSTANTS.DEBUG_MODE,
     title="Cultured Downloader API",
-    description="""An API by <a href='https://github.com/KJHJason'>KJHJason</a> to help users 
-with downloading content from Pixiv Fanbox and Fantia.\n
-Note that the user must be logged in to the services mentioned in order to download the paid content.\n
+    description="""An API by <a href='https://github.com/KJHJason'>KJHJason</a> to help users like you 
+with batch downloading content from Pixiv Fanbox and Fantia.\n
+However, it is recommended that you create your own Google Drive API key and use it as this API is rate limited by Google.\n
+Note: The user must be logged in to the services mentioned in order to download any paid content.\n
 Check out the main software at <a href='https://github.com/KJHJason/Cultured-Downloader'>GitHub</a>.""",
     version=APP_CONSTANTS.VER_ONE,
     docs_url=None,
@@ -42,7 +41,6 @@ async def index():
     return {
         "message": "Welcome to Cultured Downloader API!",
         "latest_version": APP_CONSTANTS.LATEST_VER,
-        "main_website": "https://cultureddownloader.com/",
         "bug_reports": "https://github.com/KJHJason/Cultured-Downloader/issues"
     }
 
@@ -117,101 +115,3 @@ async def google_drive_query(request: Request, data_payload: GDriveJsonRequest):
                 gdrive.get_folder_contents(folder_id=folder_id, headers=request_headers) for folder_id in query_id
             ])
             return format_directory_json_responses(directory_arr)
-
-@api.post(
-    path="/public-key",
-    description="Get the public key for secure communication when transmitting the user's data on top of HTTPS."
-                "\n\nAvailable algorithm: RSA4096-OAEP-SHA512, RSA4096-OAEP-SHA256",
-    response_model=PublicKeyResponse,
-    response_class=PrettyJSONResponse,
-    include_in_schema=True
-)
-async def get_public_key(request: Request, json_payload: PublicKeyRequest):
-    generate_nonce()
-    algorithm = json_payload.algorithm.lower()
-
-    CLOUD_LOGGER.info(
-        content=f"User {get_user_ip(request)}: Retrieved the public key (algorithm: {algorithm})]"
-    )
-
-    # if (algorithm == "rsa"):  # commented it out since only RSA is supported and the
-                                # path parameter will be validated via the PublicKeyRequest class
-    return {"public_key": USER_DATA.get_api_rsa_public_key(digest_method=json_payload.digest_method)}
-
-@api.post(
-    path="/encrypt", 
-    description="Encrypts the user's data with the server's symmetric key",
-    response_model=UserDataJsonResponse,
-    response_class=PrettyJSONResponse,
-    include_in_schema=True
-)
-async def encrypt_cookie(request: Request, json_payload: UserDataJsonRequest):
-    generate_nonce()
-    CLOUD_LOGGER.info(
-        content={
-            "message": f"User {get_user_ip(request)}: Encrypted their data.",
-            "data": "REDACTED",
-            "data_type": str(type(json_payload.data)),
-            "public_key": json_payload.public_key,
-            "digest_method": json_payload.digest_method,
-        }
-    )
-
-    data_payload = USER_DATA.decrypt_user_payload(
-        encrypted_data=json_payload.data, 
-        digest_method=json_payload.digest_method
-    )
-    if ("error" in data_payload):
-        raise APIException(error=data_payload)
-
-    try:
-        encrypted_user_data = USER_DATA.encrypt_user_data(
-            user_data=data_payload["payload"],
-            user_public_key=json_payload.public_key,
-            digest_method=json_payload.digest_method
-        )
-    except (CRC32ChecksumError):
-        raise APIException(error="integrity checks failed.")
-
-    return {"data": encrypted_user_data}
-
-@api.post(
-    path="/decrypt",
-    description="Decrypts the user's data with the server's symmetric key",
-    response_model=UserDataJsonResponse,
-    response_class=PrettyJSONResponse,
-    include_in_schema=True
-)
-async def decrypt_cookie(request: Request, json_payload: UserDataJsonRequest):
-    generate_nonce()
-    CLOUD_LOGGER.info(
-        content={
-            "message": f"User {get_user_ip(request)}: Decrypted their data.",
-            "data": "REDACTED",
-            "data_type": str(type(json_payload.data)),
-            "public_key": json_payload.public_key,
-            "digest_method": json_payload.digest_method,
-        }
-    )
-
-    encrypted_data_payload = USER_DATA.decrypt_user_payload(
-        encrypted_data=json_payload.data, 
-        digest_method=json_payload.digest_method
-    )
-    if ("error" in encrypted_data_payload):
-        raise APIException(error=encrypted_data_payload)
-
-    try:
-        decrypted_user_data = USER_DATA.decrypt_user_data(
-            encrypted_user_data=encrypted_data_payload["payload"], 
-            user_public_key=json_payload.public_key,
-            digest_method=json_payload.digest_method
-        )
-    except (TypeError):
-        raise APIException(error="encrypted cookie must be in bytes.")
-    except (CRC32ChecksumError):
-        raise APIException(error="integrity checks failed, please try again.")
-    except (DecryptionError):
-        raise APIException(error="decryption failed.")
-
-    return {"data": decrypted_user_data}

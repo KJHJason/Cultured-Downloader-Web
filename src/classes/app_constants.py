@@ -21,13 +21,6 @@ class AppConstants:
     # For the API's session middleware
     ISSUER: str = "https://cultureddownloader.com/"
 
-    # For encrypting/decrypting the saved user's cookie data
-    RSA_SHA256_KEY_ID: str = "user-data-rsa-key-1"
-    RSA_SHA512_KEY_ID: str = "user-data-rsa-key-2"
-    RSA_SHA256_VERSION_SECRET_ID: str = "user-data-rsa-key-1-ver"
-    RSA_SHA512_VERSION_SECRET_ID: str = "user-data-rsa-key-2-ver"
-    COOKIE_ENCRYPTION_KEY: str = "cookie-aes-key"
-
     # For the Google Drive API
     DRIVE_REQ_HEADERS: dict[str, str] = field(
         default_factory=lambda : {
