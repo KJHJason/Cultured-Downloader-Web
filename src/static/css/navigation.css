@@ -1,6 +1,5 @@
 /* for the navigation bar */
 nav {
-    position: fixed !important; /* to make the navigation bar sticky */
     top: 0%;
     width: 100%;
     display: flex;

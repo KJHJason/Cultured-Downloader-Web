@@ -9,9 +9,10 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/common.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/navigation.css') }}">
     {% block css %}{% endblock %}
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='images/icons/apple-touch-icon.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='images/icons/favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', path='images/icons/favicon-16x16.png') }}">
+    <!-- link tags for the favicon for all browsers including safari -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='../static/images/icons/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='../static/images/icons/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', path='../static/images/icons/favicon-16x16.png') }}">
 </head>
 <body>
     {% block navbar %}
