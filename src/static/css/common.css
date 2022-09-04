@@ -17,7 +17,7 @@ a:hover {
 	background-image: url(../images/mainbackground.jpg);
 	padding:30px;
 	background-size: 100% auto;
-	background-repeat: no-repeat;
+	background-repeat: repeat;
 	background-color:black;
 
 }
