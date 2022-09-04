@@ -67,7 +67,7 @@ async def teapot(request: Request):
 
 if (APP_CONSTANTS.DEBUG_MODE):
     @web_app_general.get(
-        path="/latest/docs",
+        path="/api/latest/docs",
         response_class=RedirectResponse
     )
     async def latest_docs():
@@ -79,7 +79,7 @@ if (APP_CONSTANTS.DEBUG_MODE):
     response_class=RedirectResponse
 )
 @web_app_general.get(
-    path="/latest/redoc",
+    path="/api/latest/redoc",
     response_class=RedirectResponse
 )
 async def latest_redocs():
@@ -87,7 +87,7 @@ async def latest_redocs():
     return RedirectResponse(url=f"/api/{APP_CONSTANTS.LATEST_VER}{APP_CONSTANTS.REDOC_URL}")
 
 @web_app_general.get(
-    path="/latest/openapi.json",
+    path="/api/latest/openapi.json",
     response_class=RedirectResponse
 )
 async def latest_openapi_json():

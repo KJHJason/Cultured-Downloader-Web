@@ -182,9 +182,11 @@ def flask_session() -> None:
     while (1):
         print("""
 ------------ API JWT Configurations Menu ------------
+
 1. Generate a new API's HMAC secret key (Cloud HSM)
 2. View the secret key from GCP Secret Manager API
 X. Back to main menu
+
 -----------------------------------------------------""")
 
         try:
@@ -259,9 +261,11 @@ def main() -> None:
     while (1):
         print("""
 ---- Cultured Downloader Web App Menu ----
+
 1. Generate a new Google OAuth2 token
 2. API JWT Configurations menu
 X. Shutdown program
+
 ------------------------------------------""")
         try:
             menu_choice = get_input(

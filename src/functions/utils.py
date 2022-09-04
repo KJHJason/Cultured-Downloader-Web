@@ -1,17 +1,22 @@
 # import third-party libraries
+import pymongo
+import motor.motor_asyncio
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 # import python standard libraries
 import time
+import base64
+import socket
 import hashlib
 import secrets
+from binascii import Error as BinasciiError
 from typing import Any, Literal
 
 # import local python libraries
 from classes.exceptions import APIException
-from classes import CONSTANTS as C
+from classes import CONSTANTS as C, SECRET_MANAGER
 from classes.middleware import CSRF_HMAC
 
 def format_server_time() -> str:
@@ -42,6 +47,63 @@ def get_user_ip(request: Request) -> str:
         return requestIP.host
 
     return "127.0.0.1"
+
+def format_ip_address(ip_address: str) -> bytes:
+    """Formats the IP address to bytes.
+
+    Args:
+        ip_address (str):
+            The IP address to format
+
+    Returns:
+        bytes:
+            The IP address in bytes
+    """
+    try:
+        return socket.inet_aton(ip_address)
+    except (OSError):
+        # if the IP address is ipv6
+        return socket.inet_pton(socket.AF_INET6, ip_address)
+
+def read_user_data(base64_encoded_data: str, decode: bool | None = False) -> str | bytes:
+    """Reads the user data from the request.
+
+    Args:
+        base64_encoded_data (str):
+            The base64 encoded data
+        decode (bool):
+            Whether to decode the data to a string or not
+
+    Returns:
+        str | bytes:
+            The user data
+
+    Raises:
+        APIException:
+            If the data could not be decoded
+    """
+    try:
+        data = base64.b64decode(base64_encoded_data)
+    except (BinasciiError, ValueError, TypeError):
+        raise APIException(error="Invalid base64-encoded data.")
+    return data.decode("utf-8") if (decode) else data
+
+def get_mongodb_client() -> pymongo.MongoClient:
+    """Returns an authenticated MongoDB client."""
+    conn_str =  "mongodb+srv://{username}:{password}@cultured-downloader" \
+                ".cjhfnzw.mongodb.net/?retryWrites=true&w=majority".format(
+                    username=SECRET_MANAGER.get_secret_payload(
+                        secret_id="mongodb-username"
+                    ),
+                    password=SECRET_MANAGER.get_secret_payload(
+                        secret_id="mongodb-password"
+                    )
+                )
+
+    client = motor.motor_asyncio.AsyncIOMotorClient(
+        host=conn_str
+    )
+    return client
 
 def validate_csrf_token(request: Request, request_token: str | None = None) -> Literal[True]:
     """Validates the CSRF token.
@@ -82,7 +144,7 @@ def validate_csrf_token(request: Request, request_token: str | None = None) -> L
         APIException:
             If the CSRF token is invalid
     """
-    csrf_token = request.session.get("csrf_token", None)
+    csrf_token = request.session.get("csrf_info", {}).get("csrf_token", None)
     if (csrf_token is None):
         raise APIException(
             error="CSRF token was not present in the session cookie."
@@ -97,20 +159,34 @@ def validate_csrf_token(request: Request, request_token: str | None = None) -> L
     token = CSRF_HMAC.get(
         token=signed_token
     )
-    if (token != csrf_token):
+    if (token["csrf_token"] != csrf_token):
         raise APIException(error="CSRF token was invalid.")
 
     return True
 
 def generate_csrf_token(request: Request) -> str:
     """Generate a CSRF token."""
-    token = hashlib.sha1(secrets.token_bytes(64)).hexdigest() # Uses sha1 to hash the raw token 
-                                                              # since only the HMAC-SHA256 and HMAC-SHA512 
-                                                              # is exposed to the user
-    request.session["csrf_token"] = token
+    session_csrf_info = request.session.get("csrf_info", None)
+    hashed_token = None
+    if (session_csrf_info is not None):
+        expiry = session_csrf_info["exp"]
+        if (expiry > time.time()):
+            hashed_token = session_csrf_info["csrf_token"]
+
+    if (hashed_token is None):
+        expiry = time.time() + 3600 * 24 * 7 # 1 week
+        # Uses sha1 to hash the raw token 
+        # since only the HMAC-SHA256 and HMAC-SHA512 
+        # is exposed to the user.
+        hashed_token = hashlib.sha1(secrets.token_bytes(64)).hexdigest()
+        request.session["csrf_info"] = {
+            "csrf_token": hashed_token, 
+            "exp": expiry
+        }
+
     signed_token = CSRF_HMAC.sign(
-        payload={"csrf_token": token},
-        expiry_date=time.time() + 3600, # 1 hour
+        payload={"csrf_token": hashed_token},
+        expiry_date=expiry,
         omit_claims=True
     )
     return signed_token

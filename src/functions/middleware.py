@@ -31,7 +31,7 @@ def add_middleware_to_app(app: ASGIApp):
     app.add_middleware(
         AuthlibJWTMiddleware, 
         jwt_obj=API_HMAC,
-        https_only=AC.DEBUG_MODE
+        https_only=not AC.DEBUG_MODE
     )
     app.add_middleware(
         xXSSProtection,

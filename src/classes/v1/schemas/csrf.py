@@ -1,5 +1,5 @@
 # import third-party libraries
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 class CsrfResponse(BaseModel):
     """The JSON payload schema for the user

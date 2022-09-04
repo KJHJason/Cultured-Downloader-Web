@@ -18,8 +18,7 @@ class UserHashAlgorithms(str, enum.Enum):
     SHA512 = "sha512"
 
 class UserDataJsonRequest(BaseModel):
-    """The JSON payload schema for the user when
-    sending their cookie for encryption/decryption."""
+    """The JSON payload schema for the user when sending their data to the API."""
     data: str = Field(
         description="The user's base64 encoded data to encrypt/decrypt."
     )
@@ -32,9 +31,8 @@ class UserDataJsonRequest(BaseModel):
     )
 
 class UserDataJsonResponse(BaseModel):
-    """The response to be sent back to the user
-    after encryption/decryption of their sent data."""
+    """The response to be sent back to the user when they send their data to the API."""
     data: str = Field(
-        description="The user's base64 encoded symmetrically encrypted/decrypted data that is also "
+        description="The user's base64 encoded data that is also "
                     "asymmetrically encrypted with the user's public key."
     )
