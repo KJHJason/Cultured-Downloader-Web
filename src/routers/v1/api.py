@@ -193,9 +193,9 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
     ip_address = hashlib.sha512(format_ip_address(ip_address)).hexdigest()
     key_id = base64.b85encode(secrets.token_bytes(64)).decode("utf-8")
     expiry_date = int(time.time()) + AC.KEYS_EXPIRY_TIME
-    has_errors = False
+
+    client, has_errors = get_mongodb_client(), False
     try:
-        client = get_mongodb_client()
         db = client[AC.DATABASE_NAME]
         await db[AC.KEYS_COLLECTION_NAME].insert_one({
             "_id": bson.ObjectId(),
@@ -261,9 +261,9 @@ async def get_key(request: Request, data_payload: GetKeyRequest):
 
     ip_address = get_user_ip(request)
     ip_address = hashlib.sha512(format_ip_address(ip_address)).hexdigest()
-    has_errors = False
+
+    client, has_errors = get_mongodb_client(), False
     try:
-        client = get_mongodb_client()
         db = client[AC.DATABASE_NAME]
         key_info = await db[AC.KEYS_COLLECTION_NAME].find_one({
             "key_id": key_id,
