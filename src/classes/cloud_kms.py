@@ -426,9 +426,10 @@ class GCP_RSA(GCP_Asymmetric):
 
         return response.plaintext if (not decode) else response.plaintext.decode("utf-8")
 
-class UserData(GCP_RSA, GCP_AESGCM):
-    """Creates an authenticated GCP KMS client that uses RSA-OAEP-SHA and 
-    AES-256-GCM for cryptographic operations with the user's data.
+class UserData(GCP_RSA):
+    """Creates an authenticated GCP KMS client that uses RSA-OAEP-SHA for cryptographic operations
+    with the user's sent payloads for layered security and to add delay to deter overloading the database
+    with too many data from malicious requests.
     """
     def __init__(self) -> None:
         """Constructor for UserData"""
