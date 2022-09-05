@@ -251,7 +251,7 @@ async def get_key(request: Request, data_payload: GetKeyRequest):
         key_info = await db[AC.KEYS_COLLECTION_NAME].find_one({
             "key_id": key_id,
             "ip_address": ip_address,
-            "expiry": {"$gt": datetime.utcfromtimestamp(int(time.time()))}
+            "expiry": {"$gt": datetime.utcnow()}
         })
     except (pymongo.errors.PyMongoError) as e:
         CLOUD_LOGGER.error(

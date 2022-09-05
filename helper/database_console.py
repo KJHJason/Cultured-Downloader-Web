@@ -8,6 +8,7 @@ import pymongo.collection as MongoCollection
 import pathlib
 import sys
 import asyncio
+from datetime import datetime
 from typing import Any, NoReturn
 from importlib.util import spec_from_file_location, module_from_spec
 
@@ -209,12 +210,12 @@ async def reencrypt_and_update_document(document: dict[str, Any], collection: Mo
 async def reencrypt_database() -> None:
     """Main function to re-encrypt data in the database.
     Normally executed when there's a key rotation."""
-    reinitialise = get_input(
+    reencrypt = get_input(
         prompt="Are you sure you want to re-encrypt all data in the database? (y/N): ",
         available_inputs=("y", "n"),
         default="n",
     )
-    if (reinitialise == "n"):
+    if (reencrypt == "n"):
         return print("Abort re-encryption of data in database...\n")
 
     print("\rRe-encrypting data in database...", end="")
@@ -237,6 +238,29 @@ async def reencrypt_database() -> None:
     finally:
         client.close()
 
+def delete_expired_keys() -> None:
+    """Main function to delete expired keys."""
+    delete_expired_keys = get_input(
+        prompt="Are you sure you want to delete all expired keys in the database? (y/N): ",
+        available_inputs=("y", "n"),
+        default="n",
+    )
+    if (delete_expired_keys == "n"):
+        return print("Abort deletion of expire keys in database...\n")
+
+    print("\rDeleting expired keys...", end="")
+    with get_mongodb_client() as client:
+        db = client["cultured-downloader"]
+        keys = db["keys"]
+        keys.delete_many(
+            filter={
+                "expiry": {
+                    "$lt": datetime.utcnow()
+                }
+            }
+        )
+    print("\rExpired keys deleted successfully!\n")
+
 def main() -> None:
     """Main function."""
     while (1):
@@ -245,13 +269,14 @@ def main() -> None:
 
 1. Re-initialise database (DANGER: ALL DATA WILL BE LOST)
 2. Re-encrypt all encrypted fields in database
+3. Delete all expired keys in database
 X. Shutdown program
 
 -------------------------------------------""")
         try:
             menu_choice = get_input(
                 prompt="Enter command: ",
-                available_inputs=("1", "2", "x")
+                available_inputs=("1", "2", "3", "x")
             )
         except (KeyboardInterrupt):
             shutdown()
@@ -261,6 +286,8 @@ X. Shutdown program
             reinitialise_database()
         elif (menu_choice == "2"):
             asyncio.run(reencrypt_database())
+        elif (menu_choice == "3"):
+            delete_expired_keys()
 
 if (__name__ == "__main__"):
     try:
