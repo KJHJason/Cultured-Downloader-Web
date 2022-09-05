@@ -1,7 +1,6 @@
 # import third-party libraries
 import bson
-import pymongo
-import pymongo.errors
+import pymongo.errors as pymongo_errors
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
@@ -111,20 +110,34 @@ async def google_drive_query(request: Request, data_payload: GDriveJsonRequest):
     request_headers["Authorization"] = f"Bearer {gdrive.get_oauth_access_token()}"
     if (gdrive_type == "file"):
         if (isinstance(query_id, str)):
-            file_details = await gdrive.get_file_details(file_id=query_id, headers=request_headers)
+            file_details = await gdrive.get_file_details(
+                file_id=query_id,
+                headers=request_headers
+            )
             return format_gdrive_json_response(file_details)
         else:
             file_arr = await asyncio.gather(*[
-                gdrive.get_file_details(file_id=file_id, headers=request_headers) for file_id in query_id
+                gdrive.get_file_details(
+                    file_id=file_id, 
+                    headers=request_headers
+                ) 
+                for file_id in query_id
             ])
             return format_file_json_responses(file_arr)
     else:
         if (isinstance(query_id, str)):
-            directory_content = await gdrive.get_folder_contents(folder_id=query_id, headers=request_headers)
+            directory_content = await gdrive.get_folder_contents(
+                folder_id=query_id,
+                headers=request_headers
+            )
             return format_directory_json_response(directory_content)
         else:
             directory_arr = await asyncio.gather(*[
-                gdrive.get_folder_contents(folder_id=folder_id, headers=request_headers) for folder_id in query_id
+                gdrive.get_folder_contents(
+                    folder_id=folder_id, 
+                    headers=request_headers
+                ) 
+                for folder_id in query_id
             ])
             return format_directory_json_responses(directory_arr)
 
@@ -191,7 +204,7 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
             "ip_address": ip_address,
             "expiry": datetime.utcfromtimestamp(expiry_date)
         })
-    except (pymongo.errors.PyMongoError) as e:
+    except (pymongo_errors.PyMongoError) as e:
         CLOUD_LOGGER.error(
             content={
                 "message": "Failed to save user's secret key",
@@ -257,7 +270,7 @@ async def get_key(request: Request, data_payload: GetKeyRequest):
             "ip_address": ip_address,
             "expiry": {"$gt": datetime.utcnow()}
         })
-    except (pymongo.errors.PyMongoError) as e:
+    except (pymongo_errors.PyMongoError) as e:
         CLOUD_LOGGER.error(
             content={
                 "message": "Failed to retrieve user's secret key",
