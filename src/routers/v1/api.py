@@ -130,13 +130,13 @@ async def google_drive_query(request: Request, data_payload: GDriveJsonRequest):
 
 @api.get(
     path="/csrf-token",
+    description="Returns a CSRF token for the user to use in a request, if required.",
     response_model=CsrfResponse,
     response_class=PrettyJSONResponse,
 )
 async def get_csrf_token(request: Request):
     generate_nonce()
-    csrf_token = generate_csrf_token(request)
-    return {"csrf_token": csrf_token}
+    return {"csrf_token": generate_csrf_token(request)}
 
 @api.post(
     path="/public-key",
