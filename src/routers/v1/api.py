@@ -33,6 +33,8 @@ api = FastAPI(
     description="""An API by <a href='https://github.com/KJHJason'>KJHJason</a> to help users like you 
 with batch downloading content from Pixiv Fanbox and Fantia.\n
 However, it is recommended that you create your own Google Drive API key and use it as this API is rate limited by Google.\n
+The user can also use this API to securely store their secret key in the server's database for future use.\n
+Additionally, the API can handle key rotations for the user because the saved key will expire after a month as compared to the user's locally stored key which are valid forever.\n
 Note: The user must be logged in to the services mentioned in order to download any paid content.\n
 Check out the main software at <a href='https://github.com/KJHJason/Cultured-Downloader'>GitHub</a>.""",
     version=AC.VER_ONE,
@@ -93,8 +95,7 @@ async def redoc_html(response: Response):
     path="/drive/query",
     description="Query Google Drive API to get the file details or all the files in a folder. Note that files or folders that has a resource key will not work and will return an empty JSON response.",
     response_class=PrettyJSONResponse,
-    response_model=Any,
-    include_in_schema=True
+    response_model=Any
 )
 async def google_drive_query(request: Request, data_payload: GDriveJsonRequest):
     generate_nonce()
@@ -142,8 +143,7 @@ async def get_csrf_token(request: Request):
     description="Get the public key for secure communication when transmitting the user's data on top of HTTPS."
                 "\n\nAvailable algorithm: RSA4096-OAEP-SHA512, RSA4096-OAEP-SHA256",
     response_model=PublicKeyResponse,
-    response_class=PrettyJSONResponse,
-    include_in_schema=True
+    response_class=PrettyJSONResponse
 )
 async def get_public_key(request: Request, json_payload: PublicKeyRequest):
     generate_nonce()
@@ -159,6 +159,8 @@ async def get_public_key(request: Request, json_payload: PublicKeyRequest):
 
 @api.post(
     path="/save-key",
+    description="Saves the user's secret symmetric key to the server for future usage.\n\n" \
+                "This is required for encryption and decryption of the user's data (client-side).",
     response_model=SaveKeyResponse,
     response_class=PrettyJSONResponse,
 )
@@ -220,6 +222,8 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
 
 @api.post(
     path="/get-key",
+    description="Retrieves the user's secret symmetric key from the server for encryption and " \
+                "decryption of the user's data (client-side).",
     response_model=GetKeyResponse,
     response_class=PrettyJSONResponse,
 )

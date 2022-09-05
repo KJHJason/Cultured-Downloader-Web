@@ -101,7 +101,9 @@ def get_mongodb_client() -> pymongo.MongoClient:
                 )
 
     client = motor.motor_asyncio.AsyncIOMotorClient(
-        host=conn_str
+        host=conn_str,
+        tls=True,
+        tlsInsecure=False
     )
     return client
 

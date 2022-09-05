@@ -91,9 +91,10 @@ def get_mongodb_client() -> pymongo.MongoClient:
                     )
                 )
 
-    # set a 5-second connection timeout
     client = pymongo.MongoClient(
-        host=conn_str
+        host=conn_str,
+        tls=True,
+        tlsInsecure=False
     )
     return client
 
@@ -110,7 +111,9 @@ def get_async_mongodb_client() -> pymongo.MongoClient:
                 )
 
     client = motor.motor_asyncio.AsyncIOMotorClient(
-        host=conn_str
+        host=conn_str,
+        tls=True,
+        tlsInsecure=False
     )
     return client
 
