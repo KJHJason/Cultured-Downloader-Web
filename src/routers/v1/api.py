@@ -180,6 +180,10 @@ async def get_public_key(request: Request, json_payload: PublicKeyRequest):
 async def save_key(request: Request, data_payload: SaveKeyRequest):
     generate_nonce()
     validate_csrf_token(request, data_payload.csrf_token)
+
+    CLOUD_LOGGER.info(
+        content=f"User {get_user_ip(request)}: Saving their symmetric key"
+    )
     key = USER_DATA.decrypt_user_payload(
         encrypted_data=read_user_data(data_payload.secret_key),
         digest_method=data_payload.server_digest_method
@@ -190,7 +194,7 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
     )
 
     ip_address = get_user_ip(request)
-    ip_address = hashlib.sha512(format_ip_address(ip_address)).hexdigest()
+    hashed_ip_address = hashlib.sha512(format_ip_address(ip_address)).hexdigest()
     key_id = base64.b85encode(secrets.token_bytes(64)).decode("utf-8")
     expiry_date = int(time.time()) + AC.KEYS_EXPIRY_TIME
 
@@ -201,14 +205,15 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
             "_id": bson.ObjectId(),
             "key_id": key_id,
             "secret_key": bson.Binary(encrypted_key),
-            "ip_address": ip_address,
+            "ip_address": hashed_ip_address,
             "expiry": datetime.utcfromtimestamp(expiry_date)
         })
     except (pymongo_errors.PyMongoError) as e:
         CLOUD_LOGGER.error(
             content={
                 "message": "Failed to save user's secret key",
-                "error": str(e)
+                "error": str(e),
+                "ip_address": ip_address
             }
         )
         has_errors = True
@@ -225,11 +230,13 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
         payload={"key_id": key_id},
         expiry_date=expiry_date
     )
-
     encrypted_token = USER_DATA.encrypt_user_payload(
         user_data=signed_token,
         user_public_key=data_payload.client_public_key,
         digest_method=data_payload.client_digest_method
+    )
+    CLOUD_LOGGER.info(
+        content=f"User {get_user_ip(request)}: Saved their symmetric key [key_id: {key_id}]"
     )
     return {"key_id_token": encrypted_token}
 
@@ -243,6 +250,13 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
 async def get_key(request: Request, data_payload: GetKeyRequest):
     generate_nonce()
     validate_csrf_token(request, data_payload.csrf_token)
+
+    CLOUD_LOGGER.info(
+        content={
+            "message": f"User {get_user_ip(request)}: Retrieving their symmetric key",
+            "key_id_token": data_payload.key_id_token
+        }
+    )
     key_id_token = USER_DATA.decrypt_user_payload(
         encrypted_data=read_user_data(data_payload.key_id_token),
         digest_method=data_payload.server_digest_method,
@@ -260,21 +274,22 @@ async def get_key(request: Request, data_payload: GetKeyRequest):
         )
 
     ip_address = get_user_ip(request)
-    ip_address = hashlib.sha512(format_ip_address(ip_address)).hexdigest()
+    hashed_ip_address = hashlib.sha512(format_ip_address(ip_address)).hexdigest()
 
     client, has_errors = get_mongodb_client(), False
     try:
         db = client[AC.DATABASE_NAME]
         key_info = await db[AC.KEYS_COLLECTION_NAME].find_one({
             "key_id": key_id,
-            "ip_address": ip_address,
+            "ip_address": hashed_ip_address,
             "expiry": {"$gt": datetime.utcnow()}
         })
     except (pymongo_errors.PyMongoError) as e:
         CLOUD_LOGGER.error(
             content={
                 "message": "Failed to retrieve user's secret key",
-                "error": str(e)
+                "error": str(e),
+                "ip_address": ip_address
             }
         )
         has_errors = True
@@ -301,5 +316,8 @@ async def get_key(request: Request, data_payload: GetKeyRequest):
         user_data=key_info,
         user_public_key=data_payload.client_public_key,
         digest_method=data_payload.client_digest_method
+    )
+    CLOUD_LOGGER.info(
+        content=f"User {get_user_ip(request)}: Retrieved their symmetric key [key_id: {key_id}]"
     )
     return {"secret_key": encrypted_key}
