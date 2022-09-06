@@ -30,15 +30,15 @@ class GetKeyResponse(BaseModel):
     """The response model for the user to use to decrypt their data with the obtained secret key from the server."""
     secret_key: str = Field(
         description="The user's secret key, which is asymmetrically encrypted with " \
-                    "the user's public key, for the user to use to decrypt their encrypted data."
+                    "the user's public key and is base64-encoded, for the user " \
+                    "to use to decrypt their encrypted data."
     )
 
 class SaveKeyRequest(BaseUserRequest):
     """The request model for the user to store their secret key."""
     secret_key: str = Field(
         description="The user's client-side generated base64-encoded secret key, " \
-                    "which are separated by a \".\", which are also asymmetrically encrypted, " \
-                    "for the server to use to store."
+                    "which is also asymmetrically encrypted, for the server to use to store."
     )
 
 class SaveKeyResponse(BaseModel):
@@ -46,5 +46,5 @@ class SaveKeyResponse(BaseModel):
     the user to use the generated key ID token to retrieve their secret key from the server later."""
     key_id_token: str = Field(
         description="The user's key ID token, which expires in a month and is asymmetrically encrypted with " \
-                    "the user's public key, for the user to use to retrieve their secret key in the server in the future."
+                    "the user's public key and is base64-encoded, for the user to use to retrieve their secret key from the server in the future."
     )
