@@ -157,5 +157,6 @@ def add_app_exception_handlers(app: ASGIApp) -> None:
                 "status_code": status_code,
                 "title": title.title(),
                 "description": description.title()
-            }
+            },
+            status_code=status_code
         )
