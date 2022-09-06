@@ -188,6 +188,21 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
         encrypted_data=read_user_data(data_payload.secret_key),
         digest_method=data_payload.server_digest_method
     )
+
+    # Check if the secret key is valid
+    if (len(key) != 32):
+        raise APIException(
+            error="your secret key must be 256 bits (32 bytes) long",
+        )
+    try:
+        key.decode("utf-8")
+    except (UnicodeDecodeError):
+        pass
+    else:
+        raise APIException(
+            error="your secret key is invalid, please generate another secret key again using a secure pseudo-random number generator",
+        )
+
     encrypted_key = AESGCM.symmetric_encrypt(
         plaintext=key,
         key_id=AC.DATABASE_KEY_ID
