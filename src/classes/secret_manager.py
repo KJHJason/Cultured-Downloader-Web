@@ -24,7 +24,7 @@ class SecretManager:
         )
 
     def get_secret_payload(self, secret_id: str, 
-                           version_id: str = "latest", decode_secret: bool = True) -> str | bytes:
+                           version_id: str = "latest", decode_secret: bool | None = True) -> str | bytes:
         """Get the secret payload from Google Cloud Secret Manager API.
 
         Args:
@@ -56,14 +56,14 @@ class SecretManager:
         secret = response.payload.data
         return secret.decode("utf-8") if (decode_secret) else secret
 
-    def upload_new_secret_version(self, secret_id: str | bytes = None, secret: str = None, 
-                                  destroy_past_ver: bool = False, destroy_optimise: bool = False) -> resources.SecretVersion:
+    def upload_new_secret_version(self, secret_id: str, secret: str | bytes, 
+                                  destroy_past_ver: bool | None = False, destroy_optimise: bool | None = False) -> resources.SecretVersion:
         """Uploads the new secret to Google Cloud Platform's Secret Manager API.
 
         Args:
             secret_id (str): 
                 The ID of the secret to upload
-            secret (str|bytes): 
+            secret (str | bytes): 
                 The secret to upload
             destroy_past_ver (bool): 
                 Whether to destroy the past version of the secret or not
