@@ -24,7 +24,7 @@ class SecretManager:
         )
 
     def get_secret_payload(self, secret_id: str, 
-                           version_id: str = "latest", decode_secret: bool | None = True) -> str | bytes:
+                           version_id: str | None = "latest", decode_secret: bool | None = True) -> str | bytes:
         """Get the secret payload from Google Cloud Secret Manager API.
 
         Args:
