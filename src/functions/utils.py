@@ -177,10 +177,7 @@ def generate_csrf_token(request: Request) -> str:
 
     if (hashed_token is None):
         expiry = time.time() + 3600 * 24 * 7 # 1 week
-        # Uses sha1 to hash the raw token 
-        # since only the HMAC-SHA256 and HMAC-SHA512 
-        # is exposed to the user.
-        hashed_token = hashlib.sha1(secrets.token_bytes(64)).hexdigest()
+        hashed_token = hashlib.sha256(secrets.token_bytes(64)).hexdigest()
         request.session["csrf_info"] = {
             "csrf_token": hashed_token, 
             "exp": expiry
