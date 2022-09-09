@@ -148,20 +148,14 @@ def validate_csrf_token(request: Request, request_token: str | None = None) -> L
     """
     csrf_token = request.session.get("csrf_info", {}).get("csrf_token", None)
     if (csrf_token is None):
-        raise APIException(
-            error="CSRF token was not present in the session cookie."
-        )
+        raise APIException(error="CSRF token was not present in the session cookie.")
 
     signed_token = request_token or request.headers.get("X-CSRF-Token", None)
     if (signed_token is None):
-        raise APIException(
-            error="CSRF token was not present in the request."
-        )
+        raise APIException(error="CSRF token was not present in the request.")
 
-    token = CSRF_HMAC.get(
-        token=signed_token
-    )
-    if (token["csrf_token"] != csrf_token):
+    token = CSRF_HMAC.get(token=signed_token)
+    if (token is None or token["csrf_token"] != csrf_token):
         raise APIException(error="CSRF token was invalid.")
 
     return True
