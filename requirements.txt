@@ -8,6 +8,10 @@ fastapi>=0.81.0
 # uvicorn[standard]>=0.18.3
 hypercorn>=0.14.1
 
+# For the mongodb database
+motor>=3.0.0
+pymongo[tls,srv]
+
 # Other useful dependencies
 # used in the FastAPI web app
 Jinja2>=3.1.2

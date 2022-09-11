@@ -31,7 +31,7 @@ def add_middleware_to_app(app: ASGIApp):
     app.add_middleware(
         AuthlibJWTMiddleware, 
         jwt_obj=API_HMAC,
-        https_only=AC.DEBUG_MODE
+        https_only=not AC.DEBUG_MODE
     )
     app.add_middleware(
         xXSSProtection,
@@ -47,6 +47,9 @@ def add_middleware_to_app(app: ASGIApp):
         Option={"Referrer-Policy": "strict-origin-when-cross-origin"}
     )
     if (not AC.DEBUG_MODE):
+        # add HSTS header to the application
+        # to force the browser to use HTTPS
+        # for all requests to prevent MITM attacks
         app.add_middleware(
             HSTS,
             Option={
@@ -55,6 +58,7 @@ def add_middleware_to_app(app: ASGIApp):
                 "preload": True
             }
         )
+
         # Add CSP middleware if not in debug mode
         # since the error message uses inline css/scripts.
         app.add_middleware(
@@ -76,9 +80,8 @@ def add_middleware_to_app(app: ASGIApp):
             }
         )
 
-    # Add cache headers to the specified routes
-    # when the app is not in debug mode
-    if (not AC.DEBUG_MODE):
+        # Add cache headers to the specified routes
+        # when the app is not in debug mode
         ONE_YEAR_CACHE = "public, max-age=31536000"
         ONE_DAY_CACHE = "public, max-age=86400"
         app.add_middleware(
@@ -157,5 +160,6 @@ def add_app_exception_handlers(app: ASGIApp) -> None:
                 "status_code": status_code,
                 "title": title.title(),
                 "description": description.title()
-            }
+            },
+            status_code=status_code
         )

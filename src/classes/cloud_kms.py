@@ -21,12 +21,16 @@ if (__package__ is None or __package__ == ""):
     from initialise import crc32c, CONSTANTS as C
     from secret_manager import SECRET_MANAGER
     from cloud_logger import CLOUD_LOGGER
+    from app_constants import AppConstants as AC
+    from exceptions import APIException
 else:
     from .exceptions import CRC32ChecksumError, DecryptionError
     from .utils import rsa_encrypt
     from .initialise import crc32c, CONSTANTS as C
     from .secret_manager import SECRET_MANAGER
     from .cloud_logger import CLOUD_LOGGER
+    from .app_constants import AppConstants as AC
+    from .exceptions import APIException
 
 class GCP_KMS:
     """Creates an authenticated Cloud KMS client that can be used for cryptographic operations."""
@@ -422,7 +426,166 @@ class GCP_RSA(GCP_Asymmetric):
 
         return response.plaintext if (not decode) else response.plaintext.decode("utf-8")
 
+class UserData(GCP_RSA):
+    """Creates an authenticated GCP KMS client that uses RSA-OAEP-SHA for cryptographic operations
+    with the user's sent payloads for layered security and to add delay to deter overloading the database
+    with too many data from malicious requests.
+    """
+    def __init__(self) -> None:
+        """Constructor for UserData"""
+        super().__init__()
+
+    def get_rsa_key_info(self, digest_method: str) -> tuple[str, int]:
+        """Get the key ID and key version of the RSA key depending on the digest method
+
+        Args:
+            digest_method (str):
+                The digest method to use for the encryption.
+                supported digest methods are: "sha256" and "sha512"
+
+        Returns:
+            The key ID and key version of the RSA key as a tuple
+        ."""
+        if (digest_method == "sha256"):
+            key = AC.RSA_SHA256_KEY_ID
+            secret_id = AC.RSA_SHA256_VERSION_SECRET_ID
+        else:
+            key = AC.RSA_SHA512_KEY_ID
+            secret_id = AC.RSA_SHA512_VERSION_SECRET_ID
+
+        return key, secret_id
+
+    def get_key_info(self, digest_method: str, get_public_key: bool | None = False) -> dict:
+        """Get the key ID and key version of the key depending on the digest method
+
+        Args:
+            digest_method (str):
+                The digest method to use for the encryption.
+                supported digest methods are: "sha256" and "sha512"
+            get_public_key (bool):
+                If True, the public key is also returned (Defaults to False)
+                Defaults to False.
+
+        Returns:
+            The key ID and key version of the key as a dict.
+            Example returned dictionary: {
+                "key_id": str,
+                "secret_id": int,
+                "latest_version": int,
+                "public_key": str | None
+            }
+        """
+        key, secret_id = self.get_rsa_key_info(digest_method)
+        latest_ver = self.get_latest_ver(key_secret_id=secret_id)
+        key_info = {
+            "key_id": key,
+            "secret_id": secret_id,
+            "latest_version": latest_ver
+        }
+
+        if (get_public_key):
+            key_info["public_key"] = self.get_public_key(key_id=key, version=latest_ver)
+            return key_info
+
+        return key_info
+
+    def get_api_rsa_public_key(self, digest_method: str) -> str:
+        """Gets the RSA public key of the Cultured Downloader API.
+
+        Args:
+            digest_method (str):
+                The digest method to use for the encryption
+
+        Returns:
+            The RSA public key of the Cultured Downloader API depending on the digest method
+        """
+        return self.get_key_info(digest_method=digest_method, get_public_key=True)["public_key"]
+
+    def encrypt_user_payload(self, 
+        user_data: str | dict | bytes, 
+        user_public_key: str, 
+        digest_method: str | None = None) -> str:
+        """Encrypts the user's response payload using the user's public key.
+
+        Args:
+            user_data (str, dict, bytes):
+                The user data to encrypt
+            user_public_key (str):
+                The public key of the user
+            digest_method (str):
+                The digest method to use (Defaults to SHA512) for
+                RSA-OAEP-SHA encryption which must be part of the cryptography module.
+
+        Returns:
+            The base64 encoded ciphertext in string format (utf-8 decoded).
+
+        Raises:
+            ValueError:
+                If the key_id is not provided
+            CRC32ChecksumError:
+                If the integrity checks failed
+        """
+        if (isinstance(user_data, str)):
+            user_data = user_data.encode("utf-8")
+        elif (isinstance(user_data, dict)):
+            user_data = json.dumps(user_data).encode("utf-8")
+
+        try:
+            encrypted_user_data = rsa_encrypt(
+                plaintext=user_data,
+                public_key=user_public_key,
+                digest_method=digest_method
+            )
+        except (ValueError, TypeError) as e:
+            CLOUD_LOGGER.info(f"Failed to encrypt user data with their public key: {e}")
+            raise APIException(
+                error="there was an error encrypting your data, please try again later " \
+                      "or try increasing your key length."
+            )
+
+        return base64.b64encode(encrypted_user_data).decode("utf-8")
+
+    def decrypt_user_payload(self, 
+            encrypted_data: bytes, 
+            digest_method: str, 
+            decode: bool | None = False) -> bytes | str:
+        """Decrypts the user data payload that was sent to the API using the API's private key.
+
+        Args:
+            encrypted_data (bytes): 
+                The user data to decrypt.
+            digest_method (str):
+                The digest method to use (Defaults to SHA512) for RSA-OAEP-SHA encryption.
+            decode (bool, optional):
+                If True, the decrypted data is decoded from bytes to string (Default: False)
+
+        Returns:
+            The decrypted user data (bytes | str).
+
+        Raises:
+            APIException:
+                if the data could not be decrypted.
+        """
+        key_info = self.get_key_info(digest_method=digest_method)
+        try:
+            decrypted_data = self.asymmetric_decrypt(
+                ciphertext=encrypted_data,
+                key_id=key_info["key_id"],
+                version=key_info["latest_version"],
+                decode=decode
+            )
+        except (DecryptionError, ValueError):
+            raise APIException(
+                error="Failed to decrypt user's data ciphertext."
+            )
+
+        return decrypted_data
+
+AESGCM = GCP_AESGCM()
+USER_DATA = UserData()
+
 __all__ = [
     "GCP_RSA",
-    "GCP_AESGCM"
+    "AESGCM",
+    "USER_DATA"
 ]

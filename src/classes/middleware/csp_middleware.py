@@ -6,6 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 # import Python's standard libraries
 import secrets
+import enum
 
 def exempt_csp(response: Response) -> None:
     """Exempt the response from the Content Security Policy middleware.
@@ -35,19 +36,49 @@ def generate_nonce(n_bytes: int | None = 32) -> str:
     nonce = secrets.token_urlsafe(n_bytes)
     return nonce
 
+@enum.unique
+class ContentSecurityPolicies(str, enum.Enum):
+    """The Content Security Policies that are allowed,
+    with reference to https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP"""
+    BASE_URI = "base-uri"
+    BLOCK_ALL_MIXED_CONTENT = "block-all-mixed-content"
+    CHILD_SRC = "child-src"
+    CONNECT_SRC = "connect-src"
+    DEFAULT_SRC = "default-src"
+    FONT_SRC = "font-src"
+    FORM_ACTION = "form-action"
+    FRAME_ANCESTORS = "frame-ancestors"
+    FRAME_SRC = "frame-src"
+    IMG_SRC = "img-src"
+    MANIFEST_SRC = "manifest-src"
+    MEDIA_SRC = "media-src"
+    NAVIGATE_TO = "navigate-to"
+    OBJECT_SRC = "object-src"
+    # PLUGIN_TYPES = "plugin-types"
+    PREFETCH_SRC = "prefetch-src"
+    # REFERRER = "referrer"
+    REPORT_SAMPLE = "report-sample"
+    REPORT_TO = "report-to"
+    REPORT_URI = "report-uri"
+    REQUIRE_SRI_FOR = "require-sri-for"
+    REQUIRE_TRUSTED_TYPES_FOR = "require-trusted-types-for"
+    SANDBOX = "sandbox"
+    SCRIPT_SRC = "script-src"
+    SCRIPT_SRC_ATTR = "script-src-attr"
+    SCRIPT_SRC_ELEM = "script-src-elem"
+    SCRIPT_DYNAMIC = "script-dynamic"
+    STYLE_SRC = "style-src"
+    STYLE_SRC_ATTR = "style-src-attr"
+    STYLE_SRC_ELEM = "style-src-elem"
+    TRUSTED_TYPES = "trusted-types"
+    UNSAFE_HASHES = "unsafe-hashes"
+    UPGRADE_INSECURE_REQUESTS = "upgrade-insecure-requests"
+    WORKER_SRC = "worker-src"
+
 class ContentSecurityPolicySchema(BaseModel):
     """To validate the CSP dictionary"""
-    values: dict[str, list[str]]
+    values: dict[ContentSecurityPolicies, list[str]]
 
-# reference: 
-#   https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
-available_policies = [
-    "child-src", "connect-src", "default-src", "font-src", "frame-src", "img-src", "manifest-src", 
-    "media-src", "object-src", "prefetch-src", "script-src", "script-src-elem", "script-src-attr", 
-    "style-src", "style-src-elem", "style-src-attr", "worker-src", "base-uri", "plugin-types", "sandbox", 
-    "form-action", "frame-ancestors", "navigate-to", "report-uri", "report-to", "block-all-mixed-content", 
-    "require-sri-for", "require-trusted-types-for", "trusted-types", "upgrade-insecure-requests"
-]
 class ContentSecurityPolicy(BaseHTTPMiddleware):
     """ContentSecurityPolicy class constructs a CSP header for the application after each requests.
 
@@ -107,10 +138,6 @@ class ContentSecurityPolicy(BaseHTTPMiddleware):
                 The CSP options to be used.
         """
         self.csp_options = ContentSecurityPolicySchema(values=csp_options)
-        for csp_option in self.csp_options.values:
-            if (csp_option not in available_policies):
-                raise SyntaxError(f"CSP option, \"{csp_option}\", does not exists.")
-
         if (script_nonce and "script-src" not in self.csp_options.values):
             raise SyntaxError("CSP option, \"script-src\", does not exists but script_nonce is set to True.")
         if (script_nonce and len(self.csp_options.values["script-src"]) == 0):

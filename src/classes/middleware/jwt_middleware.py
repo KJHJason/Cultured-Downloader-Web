@@ -1,7 +1,6 @@
 # import third-party libraries
 from authlib.jose import JsonWebToken, JWTClaims
 from authlib.jose.errors import JoseError
-from starlette.config import Config
 from starlette.datastructures import MutableHeaders
 from starlette.requests import HTTPConnection
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -118,7 +117,7 @@ class JWT_HMAC:
         if (not omit_claims):
             jwt_claims = {
                 "iss": APP_CONSTANTS.ISSUER,
-                "iat": time.time(),
+                "iat": int(time.time()),
             }
 
         if (expiry_date is not None):
@@ -126,6 +125,10 @@ class JWT_HMAC:
                 jwt_claims["exp"] = expiry_date.replace(tzinfo=ZoneInfo("UTC"))
             elif (isinstance(expiry_date, float)):
                 jwt_claims["exp"] = int(expiry_date)
+            elif (isinstance(expiry_date, int)):
+                jwt_claims["exp"] = expiry_date
+            else:
+                raise TypeError(f"Invalid expiry_date type: {type(expiry_date)}")
 
         return jwt_claims
 
@@ -221,7 +224,7 @@ class AuthlibJWTMiddleware:
         path: str | None = "/",
         same_site: str = "lax",
         https_only: bool = False,
-        domain: str | None = Config(".env")("DOMAIN", cast=str, default=None)
+        domain: str | None = None
     ) -> None:
         """Constructor for AuthlibJWTMiddleware.
 
