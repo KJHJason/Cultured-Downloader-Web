@@ -217,7 +217,7 @@ class CloudLogger:
         stack_traceback = []
 
         try:
-            while (1):
+            while (True):
                 data = getframeinfo(stack()[stack_level][0])
                 if (C.ROOT_DIR_PATH not in pathlib.Path(data.filename).parents):
                     break

@@ -67,7 +67,7 @@ def get_input(prompt: str, available_inputs: tuple[str] | list[str],
     if (isinstance(available_inputs, list)):
         available_inputs = tuple(available_inputs)
 
-    while (1):
+    while (True):
         if (extra_info is not None):
             print(extra_info)
 
@@ -179,7 +179,7 @@ def generate_new_oauth_token() -> None:
 
 def flask_session() -> None:
     API_HMAC_SHA512_KEY = "api-hmac-secret-key"
-    while (1):
+    while (True):
         print("""
 ------------ API JWT Configurations Menu ------------
 
@@ -258,7 +258,7 @@ X. Back to main menu
             del secret_payload
 
 def main() -> None:
-    while (1):
+    while (True):
         print("""
 ---- Cultured Downloader Web App Menu ----
 

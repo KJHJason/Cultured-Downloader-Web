@@ -66,7 +66,7 @@ def get_input(prompt: str, available_inputs: tuple[str] | list[str],
     if (isinstance(available_inputs, list)):
         available_inputs = tuple(available_inputs)
 
-    while (1):
+    while (True):
         if (extra_info is not None):
             print(extra_info)
 
@@ -266,7 +266,7 @@ def delete_expired_keys() -> None:
 
 def main() -> None:
     """Main function."""
-    while (1):
+    while (True):
         print("""
 ---- Cultured Downloader Database Menu ----
 

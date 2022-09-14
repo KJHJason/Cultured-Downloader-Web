@@ -70,7 +70,7 @@ class GoogleDrive(GoogleOAuth2):
 
         files, page_token = [], None
         async with httpx.AsyncClient(headers=headers, http2=True) as client:
-            while (1):
+            while (True):
                 query = " ".join((f"'{folder_id}' in parents and", self.__QUERY))
                 url = f"https://www.googleapis.com/drive/v3/files?q={query}&fields=nextPageToken,files(kind, id, name, mimeType)"
                 if (page_token is not None):
