@@ -146,16 +146,17 @@ def validate_csrf_token(request: Request, request_token: str | None = None) -> L
         APIException:
             If the CSRF token is invalid
     """
-    csrf_token = request.cookies.get(APP_CONSTANTS.CSRF_COOKIE_NAME, None)
-    if (csrf_token is None):
+    csrf_cookie = request.cookies.get(APP_CONSTANTS.CSRF_COOKIE_NAME, None)
+    if (csrf_cookie is None):
         raise APIException(error="Could not find CSRF cookie.")
 
-    signed_token = request_token or request.headers.get("X-CSRF-Token", None)
-    if (signed_token is None):
+    request_token = request_token or request.headers.get("X-CSRF-Token", None)
+    if (request_token is None):
         raise APIException(error="CSRF token was not present in the request.")
 
-    token = CSRF_HMAC.get(token=signed_token, default=None)
-    if (token is None or token != csrf_token):
+    cookie_csrf_token = CSRF_HMAC.get(token=csrf_cookie, default=None)
+    request_csrf_token = CSRF_HMAC.get(token=request_token, default=None)
+    if (cookie_csrf_token is None or request_csrf_token is None or request_csrf_token != cookie_csrf_token):
         raise APIException(error="CSRF token was invalid.")
 
     return True
