@@ -179,12 +179,15 @@ def generate_new_oauth_token() -> None:
 
 def flask_session() -> None:
     API_HMAC_SHA512_KEY = "api-hmac-secret-key"
+    API_HMAC_SALT = "api-hmac-salt"
     while (True):
         print("""
 ------------ API JWT Configurations Menu ------------
 
 1. Generate a new API's HMAC secret key (Cloud HSM)
-2. View the secret key from GCP Secret Manager API
+2. Generate a new API's HMAC salt (Cloud HSM)
+3. View the secret key from GCP Secret Manager API
+4. View the salt from GCP Secret Manager API
 X. Back to main menu
 
 -----------------------------------------------------""")
@@ -192,26 +195,28 @@ X. Back to main menu
         try:
             choice = get_input(
                 prompt="Please enter your choice: ",
-                available_inputs=("1", "2", "x")
+                available_inputs=("1", "2", "3", "4", "x")
             )
         except (KeyboardInterrupt):
             return
 
         if (choice == "x"):
             return
-        elif (choice == "1"):
+        elif (choice == "1" or choice == "2"):
+            bytes_to_be_generated = "secret key" if (choice == "1") else "salt"
+            secret_id = API_HMAC_SHA512_KEY if (choice == "1") else API_HMAC_SALT
             try:
                 generate_prompt = get_input(
-                    prompt="Do you want to generate a new secret key? (y/N): ",
+                    prompt=f"Do you want to generate a new {bytes_to_be_generated}? (y/N): ",
                     available_inputs=("y", "n"),
                     default="n"
                 )
             except (KeyboardInterrupt):
-                print("Generation of a new key will be aborted...")
+                print(f"Generation of a new {bytes_to_be_generated} will be aborted...")
                 continue
 
             if (generate_prompt != "y"):
-                print("\nCancelling key generation...", end="\n\n")
+                print(f"\nCancelling {bytes_to_be_generated} generation...", end="\n\n")
                 continue
 
             try:
@@ -221,40 +226,42 @@ X. Back to main menu
                     default="Y"
                 )
             except (KeyboardInterrupt):
-                print("Generation of a new key will be aborted...")
+                print(f"Generation of a new {bytes_to_be_generated} will be aborted...")
                 continue
             destroy_all_past_ver = True if (destroy_all_past_ver != "n") else False
 
-            print("Generating a new API's HMAC secret key...", end="")
+            print(f"Generating a new API's HMAC {bytes_to_be_generated}...", end="")
             response = SECRET_MANAGER.upload_new_secret_version(
-                secret_id=API_HMAC_SHA512_KEY,
+                secret_id=secret_id,
                 secret=GCP_KMS.get_random_bytes(
-                    n_bytes=512, 
+                    n_bytes=512 if (choice == "1") else 64, 
                     generate_from_hsm=True
                 ),
                 destroy_past_ver=destroy_all_past_ver,
                 destroy_optimise=True
             )
-            print(f"\rGenerated the new API's HMAC secret key at \"{response.name}\"!", end="\n\n")
+            print(f"\rGenerated the new API's HMAC {bytes_to_be_generated} at \"{response.name}\"!", end="\n\n")
 
-        elif (choice == "2"):
+        elif (choice == "3" or choice == "4"):
+            bytes_to_be_generated = "secret key" if (choice == "3") else "salt"
+            secret_id = API_HMAC_SHA512_KEY if (choice == "1") else API_HMAC_SALT
             try:
                 view_in_hex = get_input(
-                    prompt=f"Do you want to view the API's HMAC secret key in hexadecimal? (Y/n): ",
+                    prompt=f"Do you want to view the API's HMAC {bytes_to_be_generated} in hexadecimal? (Y/n): ",
                     available_inputs=("y", "n"),
                     default="y"
                 )
             except (KeyboardInterrupt):
-                print(f"Viewing of the API's HMAC secret key will be aborted...")
+                print(f"Viewing of the API's HMAC {bytes_to_be_generated} will be aborted...")
                 continue
 
             secret_payload = SECRET_MANAGER.get_secret_payload(
-                secret_id=API_HMAC_SHA512_KEY,
+                secret_id=secret_id,
                 decode_secret=False
             )
             if (view_in_hex != "n"):
                 secret_payload = secret_payload.hex()
-            print(f"API's HMAC secret key that is currently in use:", secret_payload, sep="\n")
+            print(f"API's HMAC {bytes_to_be_generated} that is currently in use:", secret_payload, sep="\n")
             del secret_payload
 
 def main() -> None:
@@ -263,7 +270,7 @@ def main() -> None:
 ---- Cultured Downloader Web App Menu ----
 
 1. Generate a new Google OAuth2 token
-2. API JWT Configurations menu
+2. API JWT/Serialiser Configurations menu
 X. Shutdown program
 
 ------------------------------------------""")

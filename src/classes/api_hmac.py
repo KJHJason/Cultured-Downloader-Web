@@ -1,35 +1,32 @@
 # import third-party libraries
-from authlib.jose import JsonWebToken, JWTClaims
 from authlib.jose.errors import JoseError
-from starlette.datastructures import MutableHeaders
-from starlette.requests import HTTPConnection
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from authlib.jose import JsonWebToken, JWTClaims
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired, Signer
 
 # import Python's standard libraries
 import time
-from typing import Any
+import hashlib
+from typing import Any, Callable
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 # import local python libraries
 if (__package__ is None or __package__ == ""):
-    import sys
-    import pathlib
-    sys.path.append(str(pathlib.Path(__file__).parent.parent))
-
     from secret_manager import SECRET_MANAGER
     from cloud_logger import CLOUD_LOGGER
     from app_constants import APP_CONSTANTS
 else:
-    from classes.secret_manager import SECRET_MANAGER
-    from classes.cloud_logger import CLOUD_LOGGER
-    from classes.app_constants import APP_CONSTANTS
+    from .secret_manager import SECRET_MANAGER
+    from .cloud_logger import CLOUD_LOGGER
+    from .app_constants import APP_CONSTANTS
 
 class JWT_HMAC:
     """Mainly for the API's JWT middleware that is capable of session cookies 
     similar to Flask's session cookies that uses the Authlib library for JWT support.
 
-    The key must be stored in Google Cloud Platform Secret Manager API as there is no way to set the key in this class.
+    Note that the key must be stored in Google Cloud Platform Secret Manager API 
+    as there is no way to set the key in this class. This helps improves security at the expense of speed
+    as the key will always be the latest key stored in Google Cloud Platform Secret Manager API.
     """
     def __init__(self, secret_key_id: str, digest_method: str, claim_options: dict | None = None) -> None:
         """Constructor for JWT_HMAC class.
@@ -193,7 +190,99 @@ class JWT_HMAC:
 
         return claims
 
-API_HMAC = JWT_HMAC(
+class URLSafeSerialiserHMAC:
+    """URL-safe serialiser (HMAC) using the itsdangerous module which 
+    generally produces a shorter string length than the JWT HMAC class.
+
+    Note that the secret key must be passed in upon construction of this class and is not 
+    dynamically loaded from Google Cloud Platform Secret Manager API unlike the JWT HMAC class.
+    Hence, this class is recommended only if the sensitivity of the data 
+    to be serialised is not very high or requires high availability and speed.
+    """
+    def __init__(self, 
+        secret_key: str | bytes,
+        salt: str | bytes | None = "cultured-downloader".encode("utf-8"),
+        digest_method: str = "sha512",
+        max_age: int | None = 3600 * 24 * 7 # 7 days
+    ) -> None:
+        """Constructor for the URLSafeSerialiserHMAC class.
+
+        Attributes:
+            secret_key (str | bytes):
+                Secret key that will be used to sign the data.
+            salt (str | bytes, optional):
+                Salt to be used to sign the data. Defaults to "cultured-downloader" that is utf-8 encoded.
+            digest_method (str, optional):
+                Digest method to be used to sign the data. Defaults to "sha512".
+            max_age (int, optional):
+                Maximum age of the signed data in seconds. Defaults to 7 days.
+                Warning: If set to None, the signed data will never expire.
+        """
+        digest_method = digest_method.lower()
+        if (digest_method != "sha1"):
+            digest_method = self.get_digest_method_function(digest_method)
+            signer_kwargs = {
+                "digest_method": staticmethod(digest_method)
+            }
+        else:
+            # Since the itsdangerous module uses 
+            # sha1 as the digest method by default,
+            # we do not need to pass in the digest_method 
+            # argument in the signer_kwargs dictionary.
+            signer_kwargs = None
+
+        self.signer = URLSafeTimedSerializer(
+            secret_key=secret_key, 
+            salt=salt,
+            signer_kwargs=signer_kwargs
+        )
+        self.max_age = max_age
+
+    def get_digest_method_function(self, digest_method: str) -> Callable:
+        """Get the digest method function from the hashlib module.
+
+        Args:
+            digest_method (str):
+                digest method name.
+
+        Returns:
+            Callable: 
+                digest method's hashlib function.
+        """
+        if (digest_method == "sha1"):
+            return hashlib.sha1
+        elif (digest_method == "sha256"):
+            return hashlib.sha256
+        elif (digest_method == "sha384"):
+            return hashlib.sha384
+        elif (digest_method == "sha512"):
+            return hashlib.sha512
+        else:
+            raise ValueError(f"Only sha1, sh256, sha384, and sha512 are supported but not {digest_method}!")
+
+    def sign(self, data: dict | str) -> str:
+        """Sign the data with the secret key."""
+        return self.signer.dumps(data)
+
+    def get(self, token: str, default: Any | None = None) -> dict | str | Any | None:
+        """Get the data payload from the token.
+
+        Args:
+            token (str):
+                Signed token.
+            default (Any, optional):
+                Default value to return if the token is invalid. Defaults to None.
+
+        Returns:
+            dict | str | Any | None:
+                Data payload if the token is valid. Otherwise, return the default value.
+        """
+        try:
+            return self.signer.loads(token, max_age=self.max_age)
+        except (BadSignature, SignatureExpired):
+            return default
+
+API_JWT_HMAC = JWT_HMAC(
     secret_key_id="api-hmac-secret-key",
     digest_method="sha512",
     claim_options={
@@ -204,103 +293,31 @@ API_HMAC = JWT_HMAC(
     }
 )
 
-CSRF_HMAC = JWT_HMAC(
-    secret_key_id="api-hmac-secret-key",
-    digest_method="sha256"
+__hmac_secret_key = SECRET_MANAGER.get_secret_payload(
+    secret_id="api-hmac-secret-key",
+    decode_secret=False
+)
+__hmac_salt = SECRET_MANAGER.get_secret_payload(
+    secret_id="api-hmac-salt",
+    decode_secret=False
+)
+API_HMAC = URLSafeSerialiserHMAC(
+    secret_key=__hmac_secret_key,
+    salt=__hmac_salt,
+    digest_method="sha512",
+    max_age=None
+)
+CSRF_HMAC = URLSafeSerialiserHMAC(
+    secret_key=__hmac_secret_key,
+    salt=__hmac_salt,
+    digest_method="sha256",
+    max_age=APP_CONSTANTS.CSRF_COOKIE_MAX_AGE
 )
 
-class AuthlibJWTMiddleware:
-    """Authlib JWT middleware inspired by 
-    https://github.com/aogier/starlette-authlib/blob/master/starlette_authlib/middleware.py
-
-    This implementation of session middleware takes the secret key used from
-    Google Cloud Platform Secret Manager API.
-    """
-    def __init__(self, 
-        app: ASGIApp, 
-        jwt_obj: JWT_HMAC,
-        session_cookie: str = "session",
-        max_age: int | None = 14 * 24 * 60 * 60,  # 14 days, in seconds
-        path: str | None = "/",
-        same_site: str = "lax",
-        https_only: bool = False,
-        domain: str | None = None
-    ) -> None:
-        """Constructor for AuthlibJWTMiddleware.
-
-        Attributes:
-            app (ASGIApp):
-                Starlette application.
-            jwt_obj (JWT_HMAC):
-                JWT object with configuration set.
-            session_cookie (str, optional):
-                Name of the session cookie. Defaults to "session".
-            max_age (int, optional):
-                Maximum age of the session cookie. Defaults to 14 days in seconds.
-                If None, the cookie will be a session cookie which expires when the browser is closed.
-            path (str, optional):
-                Path of the session cookie. Defaults to "/".
-            same_site (str, optional):
-                Same site policy of the session cookie. Defaults to "lax".
-            https_only (bool, optional):
-                Whether the session cookie can only be sent over HTTPS. Defaults to False.
-            domain (str, optional):
-                Domain of the session cookie. Defaults to None.
-        """
-        self.app = app
-        self.jwt = jwt_obj
-        self.domain = domain
-        self.session_cookie = session_cookie
-        self.max_age = max_age
-        self.path = path
-        self.security_flags = f"httponly; samesite={same_site}"
-        if (https_only): 
-            self.security_flags += "; secure"
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if (scope["type"] not in ("http", "websocket")):
-            await self.app(scope, receive, send)
-            return
-
-        connection = HTTPConnection(scope)
-        initial_session_was_empty = True
-        if (self.session_cookie in connection.cookies):
-            data = connection.cookies[self.session_cookie].encode("utf-8")
-            data = self.jwt.get(data, default={})
-            scope["session"] = data
-            initial_session_was_empty = False
-        else:
-            scope["session"] = {}
-
-        async def send_wrapper(message: Message) -> None:
-            if (message["type"] == "http.response.start"):
-                session = scope["session"]
-                if (session):
-                    if ("exp" not in session and self.max_age is not None):
-                        session["exp"] = time.time() + self.max_age
-                    data = self.jwt.sign(session)
-
-                    headers = MutableHeaders(scope=message)
-                    header_value = "{session_cookie}={data}; path={path}; {max_age}{security_flags}{domain}".format(
-                        session_cookie=self.session_cookie,
-                        data=data.decode("utf-8"),
-                        path=self.path,
-                        max_age=f"max-age={self.max_age}; " if (self.max_age is not None) else "",
-                        security_flags=self.security_flags,
-                        domain=f"; domain={self.domain}" if (self.domain is not None) else ""
-                    )
-                    headers.append("Set-Cookie", header_value)
-                elif (not initial_session_was_empty):
-                    # The session has been cleared.
-                    headers = MutableHeaders(scope=message)
-                    header_value = "{session_cookie}=null; path={path}; {expires}{security_flags}{domain}".format(
-                        session_cookie=self.session_cookie,
-                        path=self.path,
-                        expires="expires=Thu, 01 Jan 1970 00:00:00 GMT; ",
-                        security_flags=self.security_flags,
-                        domain=f"; domain={self.domain}" if (self.domain is not None) else ""
-                    )
-                    headers.append("Set-Cookie", header_value)
-            await send(message)
-
-        await self.app(scope, receive, send_wrapper)
+__all__ = [
+    "JWT_HMAC",
+    "URLSafeSerialiserHMAC",
+    "API_JWT_HMAC",
+    "API_HMAC",
+    "CSRF_HMAC"
+]

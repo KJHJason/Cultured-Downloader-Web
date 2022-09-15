@@ -17,6 +17,7 @@ pymongo[srv]
 Jinja2>=3.1.2
 httpx[http2]>=0.23.0
 Authlib>=1.0.1
+itsdangerous>=2.1.2
 Secweb>=1.5.1
 
 # For integrity checks

@@ -7,6 +7,8 @@ class AppConstants:
     # API constants
     DEBUG_MODE: bool = True # TODO: Change this to False when deploying to production
     FAVICON_URL: str = "/favicon.ico"
+    CSRF_COOKIE_NAME: str = "_csrf_token"
+    CSRF_COOKIE_MAX_AGE: int = 3600 * 24 * 7 # 7 days
 
     # For API documentations
     # https://fastapi.tiangolo.com/advanced/extending-openapi/

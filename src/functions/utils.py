@@ -1,7 +1,7 @@
 # import third-party libraries
 import pymongo
 import motor.motor_asyncio
-from fastapi import Request
+from fastapi import Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -11,13 +11,13 @@ import base64
 import socket
 import hashlib
 import secrets
-from binascii import Error as BinasciiError
 from typing import Any, Literal
+from binascii import Error as BinasciiError
+from classes.app_constants import APP_CONSTANTS
 
 # import local python libraries
 from classes.exceptions import APIException
-from classes import CONSTANTS as C, SECRET_MANAGER
-from classes.middleware import CSRF_HMAC
+from classes import CONSTANTS as C, SECRET_MANAGER, CSRF_HMAC
 
 def format_server_time() -> str:
     """Demo function to format the server time."""
@@ -146,42 +146,39 @@ def validate_csrf_token(request: Request, request_token: str | None = None) -> L
         APIException:
             If the CSRF token is invalid
     """
-    csrf_token = request.session.get("csrf_info", {}).get("csrf_token", None)
+    csrf_token = request.cookies.get(APP_CONSTANTS.CSRF_COOKIE_NAME, None)
     if (csrf_token is None):
-        raise APIException(error="CSRF token was not present in the session cookie.")
+        raise APIException(error="Could not find CSRF cookie.")
 
     signed_token = request_token or request.headers.get("X-CSRF-Token", None)
     if (signed_token is None):
         raise APIException(error="CSRF token was not present in the request.")
 
-    token = CSRF_HMAC.get(token=signed_token)
-    if (token is None or token["csrf_token"] != csrf_token):
+    token = CSRF_HMAC.get(token=signed_token, default=None)
+    if (token is None or token != csrf_token):
         raise APIException(error="CSRF token was invalid.")
 
     return True
 
-def generate_csrf_token(request: Request) -> str:
-    """Generate a CSRF token."""
-    session_csrf_info = request.session.get("csrf_info", None)
+def generate_csrf_token(request: Request, response: Response) -> str:
+    """Generate a CSRF token ONLY when there is no csrf_cookie."""
+    signed_token = request.cookies.get(APP_CONSTANTS.CSRF_COOKIE_NAME, None)
     hashed_token = None
-    if (session_csrf_info is not None):
-        expiry = session_csrf_info["exp"]
-        if (expiry > time.time()):
-            hashed_token = session_csrf_info["csrf_token"]
+    if (signed_token is not None):
+        hashed_token = CSRF_HMAC.get(token=signed_token, default=None)
 
     if (hashed_token is None):
-        expiry = time.time() + 3600 * 24 * 7 # 1 week
         hashed_token = hashlib.sha256(secrets.token_bytes(64)).hexdigest()
-        request.session["csrf_info"] = {
-            "csrf_token": hashed_token, 
-            "exp": expiry
-        }
+        signed_token = CSRF_HMAC.sign(hashed_token)
+        response.set_cookie(
+            key=APP_CONSTANTS.CSRF_COOKIE_NAME,
+            value=signed_token,
+            httponly=True,
+            secure=not APP_CONSTANTS.DEBUG_MODE,
+            samesite="strict",
+            max_age=CSRF_HMAC.max_age
+        )
 
-    signed_token = CSRF_HMAC.sign(
-        payload={"csrf_token": hashed_token},
-        expiry_date=expiry,
-        omit_claims=True
-    )
     return signed_token
 
 def get_jinja2_template_handler() -> Jinja2Templates:

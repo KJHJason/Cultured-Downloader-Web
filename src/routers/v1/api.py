@@ -10,10 +10,10 @@ from functions import   get_user_ip, generate_csrf_token, validate_csrf_token, \
                         get_mongodb_client, format_ip_address, read_user_data
 from functions.v1 import format_gdrive_json_response, format_file_json_responses, \
                          format_directory_json_response, format_directory_json_responses
-from classes import GoogleDrive, APP_CONSTANTS as AC, CLOUD_LOGGER, AESGCM, USER_DATA
+from classes import GoogleDrive, APP_CONSTANTS as AC, CLOUD_LOGGER, AESGCM, USER_DATA, API_JWT_HMAC
 from classes.exceptions import APIException
 from classes.responses import PrettyJSONResponse
-from classes.middleware import generate_nonce, exempt_csp, API_HMAC
+from classes.middleware import generate_nonce, exempt_csp
 from classes.v1 import  GDriveJsonRequest, CsrfResponse, SaveKeyRequest, SaveKeyResponse, \
                         PublicKeyResponse, PublicKeyRequest, GetKeyRequest, GetKeyResponse
 
@@ -147,9 +147,9 @@ async def google_drive_query(request: Request, data_payload: GDriveJsonRequest):
     response_model=CsrfResponse,
     response_class=PrettyJSONResponse,
 )
-async def get_csrf_token(request: Request):
+async def get_csrf_token(request: Request, response: Response):
     generate_nonce()
-    return {"csrf_token": generate_csrf_token(request)}
+    return {"csrf_token": generate_csrf_token(request=request, response=response)}
 
 @api.post(
     path="/public-key",
@@ -241,7 +241,7 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
             status_code=500
         )
 
-    signed_token = API_HMAC.sign(
+    signed_token = API_JWT_HMAC.sign(
         payload={"key_id": key_id},
         expiry_date=expiry_date
     )
@@ -277,7 +277,7 @@ async def get_key(request: Request, data_payload: GetKeyRequest):
         digest_method=data_payload.server_digest_method,
         decode=True
     )
-    key_id_dict = API_HMAC.get(
+    key_id_dict = API_JWT_HMAC.get(
         token=key_id_token,
         default={}
     )

@@ -11,8 +11,8 @@ from Secweb.XContentTypeOptions import XContentTypeOptions
 from Secweb.ReferrerPolicy import ReferrerPolicy
 
 # import Python's standard libraries
-import json
 import re
+import json
 
 # import local python libraries
 from classes.cloud_logger import CLOUD_LOGGER
@@ -21,7 +21,8 @@ from classes.exceptions import APIException
 from classes.responses import PrettyJSONResponse
 from functions import render_template
 from classes.middleware.csp_middleware import ContentSecurityPolicy
-from classes.middleware.jwt_middleware import AuthlibJWTMiddleware, API_HMAC
+from classes.api_hmac import API_HMAC
+from classes.middleware import SessionMiddleware
 from classes.middleware.cache_control_middleware import CacheControlMiddleware, CacheControlURLRule
 
 def add_middleware_to_app(app: ASGIApp):
@@ -29,9 +30,10 @@ def add_middleware_to_app(app: ASGIApp):
     # add session capability to the API similar to
     # flask session, request.session["key"] = "value"
     app.add_middleware(
-        AuthlibJWTMiddleware, 
-        jwt_obj=API_HMAC,
-        https_only=not AC.DEBUG_MODE
+        SessionMiddleware, 
+        signer=API_HMAC,
+        https_only=not AC.DEBUG_MODE,
+        max_age=3600 * 24 * 14
     )
     app.add_middleware(
         xXSSProtection,
