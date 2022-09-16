@@ -9,12 +9,13 @@ class UserHashAlgorithms(str, enum.Enum):
     """Supported digest methods for the user to use for
     RSA-OAEP algorithm before sending their payload to the server.
 
-    Recommended: SHA256 or SHA512
+    Recommended: SHA256, SHA384, or SHA512
 
     Warning: SHA1 is not recommended but is still supported if required such as for slow/legacy systems.
     """
     SHA1 = "sha1"
     SHA256 = "sha256"
+    SHA384 = "sha384"
     SHA512 = "sha512"
 
 class UserDataJsonRequest(BaseModel):
