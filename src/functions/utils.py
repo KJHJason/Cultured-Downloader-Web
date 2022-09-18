@@ -176,7 +176,7 @@ def generate_csrf_token(request: Request, response: Response) -> str:
             value=signed_token,
             httponly=True,
             secure=not APP_CONSTANTS.DEBUG_MODE,
-            samesite="strict",
+            samesite="lax",
             max_age=CSRF_HMAC.max_age
         )
 
