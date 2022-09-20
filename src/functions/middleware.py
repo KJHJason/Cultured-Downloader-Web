@@ -86,6 +86,7 @@ def add_middleware_to_app(app: ASGIApp):
         # when the app is not in debug mode
         ONE_YEAR_CACHE = "public, max-age=31536000"
         ONE_DAY_CACHE = "public, max-age=86400"
+        THIRTY_MIN_CACHE = "public, max-age=1800"
         app.add_middleware(
             CacheControlMiddleware, 
             routes=(
@@ -94,7 +95,7 @@ def add_middleware_to_app(app: ASGIApp):
                 CacheControlURLRule(path=re.compile(r"^/static/.*$"), cache_control=ONE_YEAR_CACHE),
                 CacheControlURLRule(path=re.compile(r"^/api/v\d+/redoc$"), cache_control=ONE_DAY_CACHE),
                 CacheControlURLRule(path=re.compile(r"^/api/v\d+/openapi\.json$"), cache_control=ONE_DAY_CACHE),
-                CacheControlURLRule(path=re.compile(r"^/api/v\d+/software/latest/file$", cache_control=ONE_DAY_CACHE)),
+                CacheControlURLRule(path=re.compile(r"^/api/v\d+/software/latest/file$", cache_control=THIRTY_MIN_CACHE)),
                 CacheControlMiddleware(path=re.compile(r"^/api/v\d+/software/latest/version$", cache_control=ONE_DAY_CACHE)),
             )
         )

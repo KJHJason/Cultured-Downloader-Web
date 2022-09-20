@@ -9,5 +9,5 @@ class LatestVerResponse(BaseModel):
     )
     download_url: str = Field(
         description="The URL to download the latest version of the Cultured Downloader software.",
-        example="https://www.cultureddownloader.com/api/v1/software/latest/file"
+        example="https://cultureddownloader.com/api/v1/software/latest/file"
     )
