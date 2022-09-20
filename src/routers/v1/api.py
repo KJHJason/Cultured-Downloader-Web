@@ -2,28 +2,24 @@
 import bson
 import pymongo.errors as pymongo_errors
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 
 # import local python libraries
 from functions import   get_user_ip, generate_csrf_token, validate_csrf_token, \
                         get_mongodb_client, format_ip_address, read_user_data
-from functions.v1 import format_gdrive_json_response, format_file_json_responses, \
-                         format_directory_json_response, format_directory_json_responses
-from classes import GoogleDrive, APP_CONSTANTS as AC, CLOUD_LOGGER, AESGCM, USER_DATA, API_JWT_HMAC
+from classes import APP_CONSTANTS as AC, CLOUD_LOGGER, AESGCM, USER_DATA, API_JWT_HMAC, CONSTANTS as C
 from classes.exceptions import APIException
 from classes.responses import PrettyJSONResponse
 from classes.middleware import generate_nonce, exempt_csp
-from classes.v1 import  GDriveJsonRequest, CsrfResponse, SaveKeyRequest, SaveKeyResponse, \
+from classes.v1 import  LatestVerResponse, CsrfResponse, SaveKeyRequest, SaveKeyResponse, \
                         PublicKeyResponse, PublicKeyRequest, GetKeyRequest, GetKeyResponse
 
 # import Python's standard libraries
 import time
 import hashlib
-import asyncio
 import secrets
 import base64
-from typing import Any
 from datetime import datetime
 
 api = FastAPI(
@@ -31,7 +27,6 @@ api = FastAPI(
     title="Cultured Downloader API",
     description="""An API by <a href='https://github.com/KJHJason'>KJHJason</a> to help users like you 
 with batch downloading content from Pixiv Fanbox and Fantia.\n
-However, it is recommended that you create your own Google Drive API key and use it as this API is rate limited by Google.\n
 The user can also use this API to securely store their secret key in the server's database for future use.\n
 Additionally, the API can handle key rotations for the user because the saved key will expire after a month as compared to the user's locally stored key which are valid forever.\n
 Note: The user must be logged in to the services mentioned in order to download any paid content.\n
@@ -76,6 +71,32 @@ if (AC.DEBUG_MODE):
         return html_response
 
 @api.get(
+    path="/software/latest/file",
+    description="Download the latest version of the software.",
+    response_class=FileResponse,
+)
+async def software_file():
+    generate_nonce()
+    return FileResponse(
+        C.SOFTWARE_SOURCE_CODE_PATH,
+        media_type="application/zip",
+        filename="cultured_downloader.zip"
+    )
+
+@api.get(
+    path="/software/latest/version",
+    description="Returns the latest version of the Cultured Downloader software.",
+    response_model=LatestVerResponse,
+    response_class=PrettyJSONResponse,
+)
+async def software_latest_version(request: Request):
+    generate_nonce()
+    return {
+        "version": C.CULTURED_DOWNLOADER_VERSION, 
+        "download_url": request.url_for("api_v1:software_file")
+    }
+
+@api.get(
     path=AC.REDOC_URL,
     response_class=HTMLResponse,
     include_in_schema=False
@@ -89,57 +110,6 @@ async def redoc_html(response: Response):
     exempt_csp(response)
     html_response.init_headers(response.headers)
     return html_response
-
-@api.post(
-    path="/drive/query",
-    description="Query Google Drive API to get the file details or all the files in a folder. Note that files or folders that has a resource key will not work and will return an empty JSON response.",
-    response_class=PrettyJSONResponse,
-    response_model=Any
-)
-async def google_drive_query(request: Request, data_payload: GDriveJsonRequest):
-    generate_nonce()
-    query_id = data_payload.drive_id
-    gdrive_type = data_payload.attachment_type
-
-    CLOUD_LOGGER.info(
-        content=f"User {get_user_ip(request)}: Queried [{gdrive_type}, {query_id}]"
-    )
-
-    gdrive = GoogleDrive()
-    request_headers = AC.DRIVE_REQ_HEADERS.copy()
-    request_headers["Authorization"] = f"Bearer {gdrive.get_oauth_access_token()}"
-    if (gdrive_type == "file"):
-        if (isinstance(query_id, str)):
-            file_details = await gdrive.get_file_details(
-                file_id=query_id,
-                headers=request_headers
-            )
-            return format_gdrive_json_response(file_details)
-        else:
-            file_arr = await asyncio.gather(*[
-                gdrive.get_file_details(
-                    file_id=file_id, 
-                    headers=request_headers
-                ) 
-                for file_id in query_id
-            ])
-            return format_file_json_responses(file_arr)
-    else:
-        if (isinstance(query_id, str)):
-            directory_content = await gdrive.get_folder_contents(
-                folder_id=query_id,
-                headers=request_headers
-            )
-            return format_directory_json_response(directory_content)
-        else:
-            directory_arr = await asyncio.gather(*[
-                gdrive.get_folder_contents(
-                    folder_id=folder_id, 
-                    headers=request_headers
-                ) 
-                for folder_id in query_id
-            ])
-            return format_directory_json_responses(directory_arr)
 
 @api.get(
     path="/csrf-token",
@@ -215,8 +185,16 @@ async def save_key(request: Request, data_payload: SaveKeyRequest):
 
     client, has_errors = get_mongodb_client(), False
     try:
-        db = client[AC.DATABASE_NAME]
-        await db[AC.KEYS_COLLECTION_NAME].insert_one({
+        collection = client[AC.DATABASE_NAME][AC.KEYS_COLLECTION_NAME]
+        no_of_keys = await collection.count_documents({"ip_address": hashed_ip_address})
+        if (no_of_keys >= AC.MAX_KEYS_PER_IP):
+            # If the user has more than the maximum 
+            # number of keys, delete the oldest key.
+            matched_documents = collection.find({"ip_address": hashed_ip_address})
+            keys_arr = await matched_documents.to_list(length=AC.MAX_KEYS_PER_IP)
+            await collection.delete_one({"expiry": min(keys_arr, key=lambda doc: doc["expiry"])})
+
+        await collection.insert_one({
             "_id": bson.ObjectId(),
             "key_id": key_id,
             "secret_key": bson.Binary(encrypted_key),

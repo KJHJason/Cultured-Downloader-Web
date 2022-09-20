@@ -20,7 +20,7 @@ class AppConstants:
     OPENAPI_JSON_URL: str = "/openapi.json"
     VER_ONE_OPENAPI_JSON_URL: str = f"/api/{VER_ONE}{OPENAPI_JSON_URL}"
 
-    # For the API's session middleware
+    # For the API's JWT
     ISSUER: str = "https://cultureddownloader.com/"
 
     # MongoDB constants
@@ -32,6 +32,7 @@ class AppConstants:
     DATABASE_KEY_ID: str = "mongodb-data"
 
     # For encrypting/decrypting the saved user's cookie data
+    MAX_KEYS_PER_IP: int = 10
     RSA_SHA256_KEY_ID: str = "user-data-rsa-key-1"
     RSA_SHA512_KEY_ID: str = "user-data-rsa-key-2"
     RSA_SHA256_VERSION_SECRET_ID: str = "user-data-rsa-key-1-ver"

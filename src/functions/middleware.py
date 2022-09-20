@@ -91,9 +91,11 @@ def add_middleware_to_app(app: ASGIApp):
             routes=(
                 CacheControlURLRule(path="/", cache_control=ONE_YEAR_CACHE),
                 CacheControlURLRule(path="/favicon.ico", cache_control=ONE_YEAR_CACHE),
-                CacheControlURLRule(path=re.compile(r"^\/static\/.*$"), cache_control=ONE_YEAR_CACHE),
-                CacheControlURLRule(path=re.compile(r"^\/api\/v\d+\/redoc$"), cache_control=ONE_DAY_CACHE),
-                CacheControlURLRule(path=re.compile(r"^\/api\/v\d+\/openapi\.json$"), cache_control=ONE_DAY_CACHE)
+                CacheControlURLRule(path=re.compile(r"^/static/.*$"), cache_control=ONE_YEAR_CACHE),
+                CacheControlURLRule(path=re.compile(r"^/api/v\d+/redoc$"), cache_control=ONE_DAY_CACHE),
+                CacheControlURLRule(path=re.compile(r"^/api/v\d+/openapi\.json$"), cache_control=ONE_DAY_CACHE),
+                CacheControlURLRule(path=re.compile(r"^/api/v\d+/software/latest/file$", cache_control=ONE_DAY_CACHE)),
+                CacheControlMiddleware(path=re.compile(r"^/api/v\d+/software/latest/version$", cache_control=ONE_DAY_CACHE)),
             )
         )
 

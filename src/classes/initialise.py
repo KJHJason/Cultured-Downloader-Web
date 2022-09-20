@@ -29,6 +29,12 @@ class Constants:
     CONFIG_DIR_PATH: pathlib.Path = ROOT_DIR_PATH.joinpath("config_files")
     ICON_PATH: pathlib.Path = ROOT_DIR_PATH.joinpath("static", "images", "icons", "favicon.ico")
 
+    # Cultured Downloader Software constants
+    CULTURED_DOWNLOADER_VERSION: str = "4.0.0"
+    SOFTWARE_SOURCE_CODE_PATH: pathlib.Path = ROOT_DIR_PATH.joinpath(
+        "source_code", "cultured_downloader.zip"
+    )
+
     # For GCP-related constants
     GOOGLE_PROJECT_NAME: str = "cultureddownloader"
     GOOGLE_PROJECT_LOCATION: str = "asia-southeast1"
