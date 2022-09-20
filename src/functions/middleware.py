@@ -96,7 +96,7 @@ def add_middleware_to_app(app: ASGIApp):
                 CacheControlURLRule(path=re.compile(r"^/api/v\d+/redoc$"), cache_control=ONE_DAY_CACHE),
                 CacheControlURLRule(path=re.compile(r"^/api/v\d+/openapi\.json$"), cache_control=ONE_DAY_CACHE),
                 CacheControlURLRule(path=re.compile(r"^/api/v\d+/software/latest/file$"), cache_control=THIRTY_MIN_CACHE),
-                CacheControlURLRule(path=re.compile(r"^/api/v\d+/software/latest/version$"), cache_control=ONE_DAY_CACHE),
+                CacheControlURLRule(path=re.compile(r"^/api/v\d+/software/latest/version$"), cache_control=THIRTY_MIN_CACHE),
             )
         )
 
