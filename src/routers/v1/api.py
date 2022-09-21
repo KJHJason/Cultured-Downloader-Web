@@ -2,7 +2,7 @@
 import bson
 import pymongo.errors as pymongo_errors
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 
 # import local python libraries
@@ -72,15 +72,14 @@ if (AC.DEBUG_MODE):
 
 @api.get(
     path="/software/latest/file",
-    description="Download the latest version of the software.",
-    response_class=FileResponse,
+    description="Download the latest version of the software by redirecting you to GitHub.",
+    response_class=RedirectResponse,
 )
 async def software_file():
     generate_nonce()
-    return FileResponse(
-        C.SOFTWARE_SOURCE_CODE_PATH,
-        media_type="application/zip",
-        filename="cultured_downloader.zip"
+    return RedirectResponse(
+        url="https://api.github.com/repos/KJHJason/Cultured-Downloader/zipball/" \
+            f"{C.CULTURED_DOWNLOADER_VERSION}"
     )
 
 @api.get(
