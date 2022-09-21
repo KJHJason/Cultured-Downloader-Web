@@ -79,8 +79,7 @@ async def software_file():
     generate_nonce()
     return RedirectResponse(
         url="https://api.github.com/repos/KJHJason/Cultured-Downloader/zipball/" \
-            f"{C.CULTURED_DOWNLOADER_VERSION}",
-        status_code=302
+            f"{C.CULTURED_DOWNLOADER_VERSION}"
     )
 
 @api.get(
