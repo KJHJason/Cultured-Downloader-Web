@@ -2,17 +2,17 @@
 import bson
 import pymongo.errors as pymongo_errors
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 
 # import local python libraries
 from functions import   get_user_ip, generate_csrf_token, validate_csrf_token, \
                         get_mongodb_client, format_ip_address, read_user_data
-from classes import APP_CONSTANTS as AC, CLOUD_LOGGER, AESGCM, USER_DATA, API_JWT_HMAC, CONSTANTS as C
+from classes import APP_CONSTANTS as AC, CLOUD_LOGGER, AESGCM, USER_DATA, API_JWT_HMAC
 from classes.exceptions import APIException
 from classes.responses import PrettyJSONResponse
 from classes.middleware import generate_nonce, exempt_csp
-from classes.v1 import  LatestVerResponse, CsrfResponse, SaveKeyRequest, SaveKeyResponse, \
+from classes.v1 import  CsrfResponse, SaveKeyRequest, SaveKeyResponse, \
                         PublicKeyResponse, PublicKeyRequest, GetKeyRequest, GetKeyResponse
 
 # import Python's standard libraries
@@ -26,8 +26,10 @@ api = FastAPI(
     debug=AC.DEBUG_MODE,
     title="Cultured Downloader API",
     description="""An API by <a href='https://github.com/KJHJason'>KJHJason</a> to help users like you 
-with batch downloading content from Pixiv Fanbox and Fantia.\n
-The user can also use this API to securely store their secret key in the server's database for future use.\n
+with batch downloading content safely from Pixiv Fanbox and Fantia.\n
+You would not want someone else to get a hold of your saved cookies and GDrive API key, right?\n
+Even after encrypting the data, the secret key must be stored somewhere, and that's where this API comes in.\n
+This API is for storing the user's secret key securely in the server's database for future use.\n
 Additionally, the API can handle key rotations for the user because the saved key will expire after a month as compared to the user's locally stored key which are valid forever.\n
 Note: The user must be logged in to the services mentioned in order to download any paid content.\n
 Check out the main software at <a href='https://github.com/KJHJason/Cultured-Downloader'>GitHub</a>.""",
@@ -69,31 +71,6 @@ if (AC.DEBUG_MODE):
         exempt_csp(response)
         html_response.init_headers(response.headers)
         return html_response
-
-@api.get(
-    path="/software/latest/file",
-    description="Download the latest version of the software by redirecting you to GitHub.",
-    response_class=RedirectResponse,
-)
-async def software_file():
-    generate_nonce()
-    return RedirectResponse(
-        url="https://api.github.com/repos/KJHJason/Cultured-Downloader/zipball/" \
-            f"{C.CULTURED_DOWNLOADER_VERSION}"
-    )
-
-@api.get(
-    path="/software/latest/version",
-    description="Returns the latest version of the Cultured Downloader software.",
-    response_model=LatestVerResponse,
-    response_class=PrettyJSONResponse,
-)
-async def software_latest_version(request: Request):
-    generate_nonce()
-    return {
-        "version": C.CULTURED_DOWNLOADER_VERSION, 
-        "download_url": request.url_for("api_v1:software_file")
-    }
 
 @api.get(
     path=AC.REDOC_URL,

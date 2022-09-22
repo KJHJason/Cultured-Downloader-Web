@@ -29,25 +29,9 @@ class Constants:
     CONFIG_DIR_PATH: pathlib.Path = ROOT_DIR_PATH.joinpath("config_files")
     ICON_PATH: pathlib.Path = ROOT_DIR_PATH.joinpath("static", "images", "icons", "favicon.ico")
 
-    # Cultured Downloader Software constants
-    CULTURED_DOWNLOADER_VERSION: str = "4.0.0"
-    SOFTWARE_SOURCE_CODE_PATH: pathlib.Path = ROOT_DIR_PATH.joinpath(
-        "source_code", "cultured_downloader.zip"
-    )
-
     # For GCP-related constants
     GOOGLE_PROJECT_NAME: str = "cultureddownloader"
     GOOGLE_PROJECT_LOCATION: str = "asia-southeast1"
-
-    # For Google API that requires Google OAuth2 authentication
-    OAUTH_CLIENT_SECRET_NAME: str = "google-oauth-client"
-    OAUTH_TOKEN_SECRET_NAME: str = "google-oauth-token"
-
-    # For Google API scopes:
-    # Google Drive API Scopes details: 
-    #   https://developers.google.com/identity/protocols/oauth2/scopes#drive
-    # WARNING: Editing the scopes below will require the token to be re-generated
-    GOOGLE_OAUTH_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
 CONSTANTS = Constants()
 
