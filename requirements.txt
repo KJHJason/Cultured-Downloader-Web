@@ -1,5 +1,5 @@
 # For Python
-setuptools>=60.1.0
+setuptools>=65.5.1
 
 # For FastAPI Application
 fastapi>=0.81.0
