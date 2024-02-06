@@ -2,7 +2,7 @@
 setuptools>=60.1.0
 
 # For FastAPI Application
-fastapi>=0.81.0
+fastapi>=0.109.1
 
 # IMPORTANT WHEN IN DEV MODE:
 # uvicorn[standard]>=0.18.3
