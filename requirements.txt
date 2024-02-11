@@ -34,3 +34,4 @@ google-cloud-kms>=2.11.2
 # used in the Flask web app
 google-cloud-secret-manager>=2.11.1
 google-cloud-logging>=3.1.2
+dnspython>=2.6.0rc1 # not directly required, pinned by Snyk to avoid a vulnerability
