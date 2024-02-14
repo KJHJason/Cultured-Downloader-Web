@@ -5,4 +5,4 @@
     (Requires Python 3.10 and Above)
 </h1>
 
-Note that this is a personal project which is hosted on [www.cultureddownloader.com](https://www.cultureddownloader.com/).
+Note that this is a personal project which **WAS** hosted on [www.cultureddownloader.com](https://www.cultureddownloader.com/).
